@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "env": {
+        "CONTEXT7_API_KEY": "${env:CONTEXT7_API_KEY}"
+      },
+      "timeoutMs": 120000
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequentialthinking"],
+      "timeoutMs": 120000
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": ["-y", "puppeteer-mcp-claude"],
+      "env": {
+        "NODE_ENV": "production"
+      },
+      "timeoutMs": 120000
+    }
+  },
+  "agents": {
+    "context-manager": {
+      "profile": "development-tools/context-manager",
+      "bootstrapDocs": ["docs/agents/development-tools/context-manager.md"]
+    }
+  }
+}

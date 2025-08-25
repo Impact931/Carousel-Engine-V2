@@ -10,7 +10,7 @@
     },
     "sequential-thinking": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-sequentialthinking"],
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
       "timeoutMs": 120000
     },
     "puppeteer": {

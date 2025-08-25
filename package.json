@@ -8,3 +8,9 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc && vite build",
     "dev": "vite dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}

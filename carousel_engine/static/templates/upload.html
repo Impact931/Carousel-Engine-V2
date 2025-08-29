@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Document Upload - Carousel Engine v2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #2d3748;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-group input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .file-upload {
+            position: relative;
+            display: block;
+            width: 100%;
+            padding: 20px;
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .file-upload:hover {
+            border-color: #667eea;
+            background-color: #f8faff;
+        }
+
+        .file-upload input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-upload-content {
+            color: #718096;
+        }
+
+        .file-upload-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+            color: #a0aec0;
+        }
+
+        .file-selected {
+            border-color: #48bb78;
+            background-color: #f0fff4;
+        }
+
+        .file-selected .file-upload-content {
+            color: #2f855a;
+            font-weight: 600;
+        }
+
+        .file-info {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #a0aec0;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 16px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 32px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .submit-btn:disabled {
+            background: #e2e8f0;
+            color: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 24px;
+        }
+
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result {
+            display: none;
+            margin-top: 24px;
+            padding: 16px;
+            border-radius: 8px;
+        }
+
+        .result.success {
+            background-color: #f0fff4;
+            border: 1px solid #9ae6b4;
+            color: #2f855a;
+        }
+
+        .result.error {
+            background-color: #fed7d7;
+            border: 1px solid #feb2b2;
+            color: #c53030;
+        }
+
+        .required {
+            color: #e53e3e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎠 Client Document Upload</h1>
+            <p>Upload client documents for personalized carousel generation</p>
+        </div>
+
+        <form id="uploadForm" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="project_name">Project Name <span class="required">*</span></label>
+                <input type="text" id="project_name" name="project_name" required 
+                       placeholder="Enter the exact project name from your database">
+            </div>
+
+            <div class="form-group">
+                <label for="client_profile">Client Profile Document <span class="required">*</span></label>
+                <div class="file-upload" onclick="document.getElementById('client_profile').click()">
+                    <input type="file" id="client_profile" name="client_profile" required 
+                           accept=".pdf,.docx,.txt,.md">
+                    <div class="file-upload-content">
+                        <div class="file-upload-icon">📄</div>
+                        <div>Click to upload Client Profile document</div>
+                    </div>
+                </div>
+                <div class="file-info">Accepted formats: PDF, Word, Text, Markdown (max {{ max_file_size_mb }}MB)</div>
+            </div>
+
+            <div class="form-group">
+                <label for="content_icp">Content Ideal Client Profile <span class="required">*</span></label>
+                <div class="file-upload" onclick="document.getElementById('content_icp').click()">
+                    <input type="file" id="content_icp" name="content_icp" required 
+                           accept=".pdf,.docx,.txt,.md">
+                    <div class="file-upload-content">
+                        <div class="file-upload-icon">👥</div>
+                        <div>Click to upload Content ICP document</div>
+                    </div>
+                </div>
+                <div class="file-info">Document describing the ideal client profile for content targeting</div>
+            </div>
+
+            <div class="form-group">
+                <label for="voice_style_guide">Voice & Style Guide <span class="required">*</span></label>
+                <div class="file-upload" onclick="document.getElementById('voice_style_guide').click()">
+                    <input type="file" id="voice_style_guide" name="voice_style_guide" required 
+                           accept=".pdf,.docx,.txt,.md">
+                    <div class="file-upload-content">
+                        <div class="file-upload-icon">🎯</div>
+                        <div>Click to upload Voice & Style Guide</div>
+                    </div>
+                </div>
+                <div class="file-info">Document outlining brand voice, tone, and content style guidelines</div>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">
+                Upload Documents & Create System Message
+            </button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <div>Processing documents and creating Google Drive folder...</div>
+        </div>
+
+        <div class="result" id="result">
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('uploadForm');
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const resultContent = document.getElementById('resultContent');
+
+            // File input change handlers
+            const fileInputs = ['client_profile', 'content_icp', 'voice_style_guide'];
+            
+            fileInputs.forEach(inputId => {
+                const input = document.getElementById(inputId);
+                const uploadDiv = input.parentElement;
+                const contentDiv = uploadDiv.querySelector('.file-upload-content');
+                
+                input.addEventListener('change', function() {
+                    if (this.files && this.files[0]) {
+                        const file = this.files[0];
+                        uploadDiv.classList.add('file-selected');
+                        contentDiv.innerHTML = `
+                            <div class="file-upload-icon">✅</div>
+                            <div>${file.name}</div>
+                        `;
+                    }
+                });
+            });
+
+            // Form submission
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                // Validate form
+                const projectName = document.getElementById('project_name').value.trim();
+                if (!projectName) {
+                    showResult('error', 'Please enter a project name');
+                    return;
+                }
+
+                // Check if all files are selected
+                const allFilesSelected = fileInputs.every(inputId => {
+                    const input = document.getElementById(inputId);
+                    return input.files && input.files[0];
+                });
+
+                if (!allFilesSelected) {
+                    showResult('error', 'Please select all three required documents');
+                    return;
+                }
+
+                // Show loading
+                submitBtn.disabled = true;
+                loading.style.display = 'block';
+                result.style.display = 'none';
+
+                try {
+                    // Create FormData
+                    const formData = new FormData();
+                    formData.append('project_name', projectName);
+                    
+                    fileInputs.forEach(inputId => {
+                        const input = document.getElementById(inputId);
+                        if (input.files[0]) {
+                            formData.append(inputId, input.files[0]);
+                        }
+                    });
+
+                    // Submit to API
+                    const response = await fetch('/api/documents/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        showResult('success', `
+                            <h3>✅ Upload Successful!</h3>
+                            <p><strong>Project:</strong> ${data.matched_project_name || 'Unknown'}</p>
+                            <p><strong>Documents processed:</strong> ${data.documents_processed}</p>
+                            <p><strong>Processing time:</strong> ${data.processing_time_seconds?.toFixed(2)}s</p>
+                            <p><strong>Google Drive folder:</strong> <a href="${data.google_folder_url}" target="_blank">View folder</a></p>
+                            <p><strong>System message file:</strong> <a href="${data.system_message_url}" target="_blank">View system message</a></p>
+                            <p><strong>Client database updated:</strong> ${data.client_database_updated ? '✅ Yes' : '❌ No'}</p>
+                            <p>🎯 System message has been generated and saved. The Carousel Engine is now ready to create personalized content for this client!</p>
+                        `);
+                        
+                        // Reset form after success
+                        setTimeout(() => {
+                            form.reset();
+                            fileInputs.forEach(inputId => {
+                                const input = document.getElementById(inputId);
+                                const uploadDiv = input.parentElement;
+                                const contentDiv = uploadDiv.querySelector('.file-upload-content');
+                                uploadDiv.classList.remove('file-selected');
+                                // Reset content based on input type
+                                const icons = {
+                                    'client_profile': '📄',
+                                    'content_icp': '👥', 
+                                    'voice_style_guide': '🎯'
+                                };
+                                const labels = {
+                                    'client_profile': 'Click to upload Client Profile document',
+                                    'content_icp': 'Click to upload Content ICP document',
+                                    'voice_style_guide': 'Click to upload Voice & Style Guide'
+                                };
+                                contentDiv.innerHTML = `
+                                    <div class="file-upload-icon">${icons[inputId]}</div>
+                                    <div>${labels[inputId]}</div>
+                                `;
+                            });
+                        }, 3000);
+                        
+                    } else {
+                        showResult('error', `
+                            <h3>❌ Upload Failed</h3>
+                            <p>${data.error_message || data.detail || 'Unknown error occurred'}</p>
+                        `);
+                    }
+
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    showResult('error', `
+                        <h3>❌ Upload Failed</h3>
+                        <p>Network error: ${error.message}</p>
+                    `);
+                } finally {
+                    submitBtn.disabled = false;
+                    loading.style.display = 'none';
+                }
+            });
+
+            function showResult(type, content) {
+                result.className = `result ${type}`;
+                result.style.display = 'block';
+                resultContent.innerHTML = content;
+                
+                // Scroll to result
+                result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        });
+    </script>
+</body>
+</html>

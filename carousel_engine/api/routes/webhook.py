@@ -140,12 +140,12 @@ async def _process_page_update(page_id: str, payload: Dict[str, Any]) -> None:
     try:
         logger.info("Starting background page processing", page_id=page_id)
         
-        # Get engine from app state
-        from ...api.main import app
-        engine = app.state.engine
+        # Get engine using lazy initialization
+        from ...api.main import get_or_create_engine
+        engine = get_or_create_engine()
         
         if not engine:
-            logger.error("Engine not available in app state")
+            logger.error("Engine initialization failed")
             return
         
         # First, check if this page should trigger carousel generation

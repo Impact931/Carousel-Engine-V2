@@ -106,7 +106,7 @@ except Exception as e:
 # Include route modules
 app.include_router(webhook.router, prefix="/webhook", tags=["webhook"])
 app.include_router(health.router, prefix="/health", tags=["health"])
-app.include_router(carousel.router, prefix="/api", tags=["carousel"])
+app.include_router(carousel.router, prefix="/api/carousel", tags=["carousel"])
 app.include_router(document_upload.router, prefix="/api", tags=["document-upload"])
 
 

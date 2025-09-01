@@ -223,26 +223,50 @@ async def _should_process_page(engine, page_id: str) -> bool:
         # Fetch current page state
         page = await engine.notion.get_page(page_id)
         
-        # Check if this is a carousel-enabled page
-        if not hasattr(page, 'format') or not page.format:
-            logger.debug("Page has no format specified", page_id=page_id)
+        logger.info("Evaluating page for processing", 
+                   page_id=page_id,
+                   page_title=getattr(page, 'title', 'No title'),
+                   has_format=hasattr(page, 'format'),
+                   format_value=getattr(page, 'format', None),
+                   has_status=hasattr(page, 'status'),
+                   status_value=getattr(page, 'status', None),
+                   has_content=bool(getattr(page, 'content', None)),
+                   content_length=len(getattr(page, 'content', '') or ''))
+        
+        # Check if page has any meaningful content (title, content, or rich text properties)
+        content_sources = []
+        if hasattr(page, 'content') and page.content and page.content.strip():
+            content_sources.append(f"content({len(page.content)} chars)")
+        if hasattr(page, 'title') and page.title and page.title.strip():
+            content_sources.append(f"title({len(page.title)} chars)")
+        
+        # For Notion automation webhooks, we should be more permissive
+        # since the page was explicitly triggered by user action
+        if not content_sources:
+            logger.info("Page has no processable content", page_id=page_id)
             return False
         
-        # Check status - only process if status is "Ready" 
-        if page.status != CarouselStatus.READY:
-            logger.debug(
-                "Page status not ready for processing",
-                page_id=page_id,
-                status=page.status.value
-            )
-            return False
+        # If page has Format property, check if it's carousel-related
+        if hasattr(page, 'format') and page.format:
+            if str(page.format).lower() not in ['carousel', 'post', 'content']:
+                logger.info("Page format not suitable for carousel generation", 
+                          page_id=page_id, format=page.format)
+                return False
         
-        # Check if page has content
-        if not page.content or not page.content.strip():
-            logger.debug("Page has no content", page_id=page_id)
-            return False
+        # If page has Status property, be flexible about status values
+        if hasattr(page, 'status') and page.status:
+            # Accept various "ready" status values
+            ready_statuses = ['ready', 'pending', 'new', 'todo', 'queued', 'active']
+            if str(page.status).lower() not in ready_statuses:
+                logger.info("Page status indicates not ready for processing", 
+                          page_id=page_id, status=page.status)
+                return False
         
-        logger.info("Page meets processing criteria", page_id=page_id)
+        logger.info("Page meets processing criteria", 
+                   page_id=page_id,
+                   content_sources=content_sources,
+                   format=getattr(page, 'format', 'not set'),
+                   status=getattr(page, 'status', 'not set'))
         return True
         
     except Exception as e:

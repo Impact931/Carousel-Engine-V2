@@ -69,4 +69,20 @@ credentials.json
 
 # Package files that aren't needed at runtime
 package-lock.json
+requirements-prod.txt
 *.md
+
+# Additional development files
+.pytest_cache/
+.mypy_cache/
+.tox/
+*.egg-info/
+build/
+dist/
+
+# Large development dependencies that may be cached
+**/mypy/**
+**/black/**  
+**/flake8/**
+**/pytest/**
+**/coverage/**

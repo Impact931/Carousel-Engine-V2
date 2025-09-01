@@ -180,9 +180,9 @@ async def upload_client_documents(
             )
             processed_documents.append(client_doc)
         
-        # Step 4: Generate system message from extracted content
-        logger.info("Generating system message from extracted content...")
-        system_message = document_processor.generate_system_message(extracted_content)
+        # Step 4: Generate AI-distilled system message from extracted content
+        logger.info("Generating AI-distilled system message from extracted content...")
+        system_message = await document_processor.generate_system_message(extracted_content)
         
         # Step 5: Save system message to Google Drive
         logger.info("Uploading system message to Google Drive...")

@@ -222,17 +222,101 @@ class DocumentProcessor:
         except Exception as e:
             raise ContentProcessingError(f"Text file extraction failed: {e}")
     
-    def generate_system_message(self, extracted_content: Dict[str, str]) -> str:
-        """Generate system message for OpenAI from extracted document content
+    async def generate_system_message(self, extracted_content: Dict[str, str]) -> str:
+        """Generate optimized system message using AI distillation from client documents
         
         Args:
             extracted_content: Dictionary mapping document types to their content
             
         Returns:
-            System message string for OpenAI API
+            Concise, executive-level system message for OpenAI API
         """
         try:
-            logger.info("Generating system message from client documents")
+            logger.info("Generating AI-distilled system message from client documents")
+            
+            # Use GPT-4o to distill the raw documents into a concise system message
+            distilled_message = await self._distill_client_documents(extracted_content)
+            
+            if distilled_message:
+                logger.info(f"Generated distilled system message: {len(distilled_message)} chars")
+                return distilled_message
+            else:
+                logger.warning("AI distillation failed, falling back to basic system message")
+                return self._generate_basic_system_message(extracted_content)
+            
+        except Exception as e:
+            logger.error(f"Error generating system message: {e}")
+            logger.warning("Falling back to basic system message generation")
+            return self._generate_basic_system_message(extracted_content)
+
+    async def _distill_client_documents(self, extracted_content: Dict[str, str]) -> Optional[str]:
+        """Use GPT-4o to distill client documents into a concise system message
+        
+        Args:
+            extracted_content: Raw document content
+            
+        Returns:
+            Distilled system message or None if failed
+        """
+        try:
+            # Prepare content for analysis
+            content_summary = []
+            for doc_type, content in extracted_content.items():
+                if content and content.strip():
+                    content_summary.append(f"{doc_type.upper()}:\n{content[:2000]}...")  # Limit to prevent token overflow
+            
+            if not content_summary:
+                return None
+            
+            combined_content = "\n\n".join(content_summary)
+            
+            distillation_prompt = f"""You are an executive-level marketing and brand voice expert. Analyze these client documents and distill them into a concise, powerful system message for AI content generation.
+
+CLIENT DOCUMENTS:
+{combined_content}
+
+Create a system message that:
+1. Captures the core brand essence in 3-4 sentences
+2. Defines the target audience clearly and specifically
+3. Establishes the unique voice/tone in concrete terms
+4. Provides actionable content creation guidance
+5. Is under 500 words total
+
+Format as a direct system message starting with "You are creating content for..." and include specific, actionable brand guidelines that will produce highly engaging, on-brand social media content.
+
+Focus on what makes this brand unique and compelling - extract the emotional core, key differentiators, and communication style that will resonate with their specific audience."""
+
+            # Use OpenAI service to distill content
+            from ..services.openai_service import OpenAIService
+            openai_service = OpenAIService()
+            
+            response = await openai_service.generate_text_completion(
+                prompt=distillation_prompt,
+                max_tokens=600,
+                temperature=0.3  # Lower temperature for consistent, focused output
+            )
+            
+            if response and response.strip():
+                return response.strip()
+            else:
+                logger.warning("OpenAI distillation returned empty response")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error in document distillation: {e}")
+            return None
+
+    def _generate_basic_system_message(self, extracted_content: Dict[str, str]) -> str:
+        """Generate basic system message as fallback (original method)
+        
+        Args:
+            extracted_content: Dictionary mapping document types to their content
+            
+        Returns:
+            Basic system message string for OpenAI API
+        """
+        try:
+            logger.info("Generating basic fallback system message from client documents")
             
             system_message_parts = [
                 "You are GPT-5, enhanced with 20 years of proven social media marketing expertise.",

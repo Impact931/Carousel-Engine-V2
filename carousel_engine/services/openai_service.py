@@ -175,6 +175,60 @@ class OpenAIService:
             error_msg = f"Unexpected error optimizing content: {e}"
             logger.error(error_msg)
             raise OpenAIError(error_msg, prompt=prompt)
+
+    async def generate_text_completion(
+        self,
+        prompt: str,
+        max_tokens: int = 500,
+        temperature: float = 0.3
+    ) -> str:
+        """Generate text completion using GPT
+        
+        Args:
+            prompt: Input prompt
+            max_tokens: Maximum tokens to generate
+            temperature: Creativity level (0.0-1.0)
+            
+        Returns:
+            Generated text response
+            
+        Raises:
+            OpenAIError: If text generation fails
+        """
+        try:
+            logger.info(f"Generating text completion: {len(prompt)} chars prompt")
+            
+            response = self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=max_tokens,
+                temperature=temperature
+            )
+            
+            if not response or not response.choices:
+                raise OpenAIError("No response from OpenAI API")
+            
+            content = response.choices[0].message.content
+            if not content:
+                raise OpenAIError("Empty response from OpenAI API")
+            
+            # Track costs
+            cost = self._calculate_actual_gpt_cost(response.usage)
+            self.total_cost += cost
+            
+            logger.info(f"Generated text completion: {len(content)} chars, cost: ${cost:.4f}")
+            return content
+            
+        except openai.OpenAIError as e:
+            error_msg = f"OpenAI API error generating text: {e}"
+            logger.error(error_msg)
+            raise OpenAIError(error_msg)
+        except Exception as e:
+            error_msg = f"Unexpected error generating text: {e}"
+            logger.error(error_msg)
+            raise OpenAIError(error_msg)
     
     def get_total_cost(self) -> float:
         """Get total cost for this service instance

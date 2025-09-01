@@ -19,7 +19,7 @@ class Config(BaseSettings):
     
     # API Keys
     notion_api_key: str = Field(..., description="Notion API integration token")
-    google_oauth_client_id: str = Field(..., description="Google OAuth client ID")
+    google_oauth_client_id: Optional[str] = Field(default=None, description="Google OAuth client ID")
     google_oauth_client_secret: Optional[str] = Field(default=None, description="Google OAuth client secret")
     openai_api_key: str = Field(..., description="OpenAI API key for image generation")
     

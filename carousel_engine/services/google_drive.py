@@ -35,22 +35,29 @@ class GoogleDriveService:
             client_id: OAuth client ID, defaults to config value
             client_secret: OAuth client secret, defaults to config value
         """
-        try:
-            self.client_id = client_id or config.google_oauth_client_id
-            self.client_secret = client_secret or config.google_oauth_client_secret
-            self.token_file = 'google_drive_token.pickle'
+        self.client_id = client_id or config.google_oauth_client_id
+        self.client_secret = client_secret or config.google_oauth_client_secret
+        self.token_file = 'google_drive_token.pickle'
+        self.service = None  # Lazy initialization
+        logger.info("Google Drive service created (OAuth will be initialized on first use)")
+    
+    def _ensure_service_initialized(self):
+        """Initialize the Google Drive service if not already done"""
+        if self.service is None:
+            if not self.client_id or not self.client_secret:
+                raise GoogleDriveError(
+                    "Google OAuth credentials not configured. "
+                    "Please set GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET environment variables."
+                )
             
-            # Initialize credentials
-            credentials = self._get_credentials()
-            
-            # Build service
-            self.service = build('drive', 'v3', credentials=credentials)
-            logger.info("Google Drive service initialized successfully with OAuth")
-            
-        except Exception as e:
-            error_msg = f"Failed to initialize Google Drive service: {e}"
-            logger.error(error_msg)
-            raise GoogleDriveError(error_msg)
+            try:
+                credentials = self._get_credentials()
+                self.service = build('drive', 'v3', credentials=credentials)
+                logger.info("Google Drive service initialized successfully with OAuth")
+            except Exception as e:
+                error_msg = f"Failed to initialize Google Drive service: {e}"
+                logger.error(error_msg)
+                raise GoogleDriveError(error_msg)
     
     def _get_credentials(self) -> Credentials:
         """Get or refresh OAuth credentials"""
@@ -133,6 +140,7 @@ class GoogleDriveService:
             GoogleDriveError: If folder creation fails
         """
         try:
+            self._ensure_service_initialized()
             logger.info(f"Creating Google Drive folder: {folder_name}")
             
             # Prepare folder metadata

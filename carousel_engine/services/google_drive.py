@@ -53,10 +53,21 @@ class GoogleDriveService:
             try:
                 credentials = self._get_credentials()
                 self.service = build('drive', 'v3', credentials=credentials)
-                logger.info("Google Drive service initialized successfully with OAuth")
+                
+                # Test the service with a simple call to verify authentication
+                try:
+                    test_result = self.service.about().get(fields='user').execute()
+                    if test_result is None:
+                        raise GoogleDriveError("Google Drive API test call returned None - authentication failed")
+                    logger.info(f"Google Drive service initialized and authenticated successfully as: {test_result.get('user', {}).get('emailAddress', 'unknown')}")
+                except Exception as auth_test_error:
+                    self.service = None  # Reset service to prevent invalid state
+                    raise GoogleDriveError(f"Google Drive authentication test failed: {auth_test_error}")
+                    
             except Exception as e:
                 error_msg = f"Failed to initialize Google Drive service: {e}"
                 logger.error(error_msg)
+                self.service = None  # Ensure service is None on failure
                 raise GoogleDriveError(error_msg)
     
     def _get_credentials(self) -> Credentials:
@@ -407,7 +418,9 @@ class GoogleDriveService:
             GoogleDriveError: If listing fails
         """
         try:
-            logger.info(f"Listing folders in parent: {parent_folder_id}")
+            logger.info(f"DEBUG: Starting list_folders method for parent: {parent_folder_id}")
+            self._ensure_service_initialized()
+            logger.info(f"DEBUG: Service initialized, listing folders in parent: {parent_folder_id}")
             
             query = f"'{parent_folder_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
             
@@ -417,6 +430,13 @@ class GoogleDriveService:
                 orderBy="name"
             ).execute()
             
+            logger.info(f"Google Drive API response: {results}")
+            if results is None:
+                raise GoogleDriveError(f"Google Drive API returned None for query: {query}")
+            
+            if results is None:
+                logger.error(f"CRITICAL: Google Drive API returned None - check authentication")
+                raise GoogleDriveError(f"Google Drive API returned None for query: {query} - authentication may be invalid")
             folders = results.get('files', [])
             logger.info(f"Found {len(folders)} folders in parent {parent_folder_id}")
             

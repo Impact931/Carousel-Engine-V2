@@ -3,8 +3,8 @@ Configuration management for Carousel Engine v2
 """
 
 import os
-from typing import Optional, List
-from pydantic import Field
+from typing import Optional, List, Union
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -46,7 +46,15 @@ class Config(BaseSettings):
     social_media_dashboard_page_id: str = Field(default="Social-Media-231c2a32df0d81c485fef840c3d38ff3", description="Social Media Dashboard Page ID")
     target_google_drive_folder_id: str = Field(default="1lalsBxSRqiblOMF1_r76OEbI4eEvPJuq", description="Target Google Drive Location")
     max_file_size_mb: int = Field(default=10, description="Maximum file size in MB")
-    allowed_file_types: List[str] = Field(default=["pdf", "docx", "txt", "md"], description="Allowed document types")
+    allowed_file_types: Union[List[str], str] = Field(default=["pdf", "docx", "txt", "md"], description="Allowed document types")
+    
+    @field_validator('allowed_file_types')
+    @classmethod
+    def parse_file_types(cls, v):
+        """Convert comma-separated string to list if needed"""
+        if isinstance(v, str):
+            return [item.strip() for item in v.split(',') if item.strip()]
+        return v
     
     # Logging
     log_level: str = Field(default="INFO", description="Logging level")

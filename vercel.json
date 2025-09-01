@@ -2,10 +2,7 @@
   "builds": [
     {
       "src": "api/test.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "50mb"
-      }
+      "use": "@vercel/python"
     }
   ],
   "routes": [
@@ -16,10 +13,5 @@
   ],
   "env": {
     "PYTHON_VERSION": "3.11"
-  },
-  "functions": {
-    "api/test.py": {
-      "maxDuration": 300
-    }
   }
 }

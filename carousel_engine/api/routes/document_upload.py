@@ -3,7 +3,6 @@ Document upload API routes for client documents
 """
 
 import logging
-import re
 import time
 from typing import Dict, List, Tuple
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Request
@@ -30,35 +29,6 @@ router = APIRouter(prefix="/documents", tags=["document-upload"])
 templates = Jinja2Templates(directory="carousel_engine/static/templates")
 
 
-def extract_google_drive_folder_id(drive_url: str) -> str:
-    """Extract folder ID from Google Drive share URL
-    
-    Args:
-        drive_url: Google Drive folder share URL
-        
-    Returns:
-        Extracted folder ID
-        
-    Raises:
-        ValueError: If URL format is invalid
-    """
-    # Common Google Drive folder URL patterns:
-    # https://drive.google.com/drive/folders/FOLDER_ID
-    # https://drive.google.com/drive/folders/FOLDER_ID?usp=sharing
-    # https://drive.google.com/drive/u/0/folders/FOLDER_ID
-    
-    patterns = [
-        r'https://drive\.google\.com/drive/(?:u/\d+/)?folders/([a-zA-Z0-9_-]+)',
-        r'https://drive\.google\.com/drive/folders/([a-zA-Z0-9_-]+)',
-    ]
-    
-    for pattern in patterns:
-        match = re.search(pattern, drive_url)
-        if match:
-            return match.group(1)
-    
-    raise ValueError(f"Invalid Google Drive folder URL format: {drive_url}")
-
 
 @router.get("/upload", response_class=HTMLResponse)
 async def upload_page(request: Request):
@@ -80,7 +50,6 @@ async def upload_page(request: Request):
 @router.post("/upload", response_model=DocumentUploadResponse)
 async def upload_client_documents(
     project_name: str = Form(..., description="Client project name for matching"),
-    google_drive_folder: str = Form(..., description="Google Drive folder URL for this client"),
     client_profile: UploadFile = File(..., description="Client profile document"),
     content_icp: UploadFile = File(..., description="Content ideal client profile document"),
     voice_style_guide: UploadFile = File(..., description="Voice and style guide document"),
@@ -89,7 +58,6 @@ async def upload_client_documents(
     
     Args:
         project_name: Client project name to match in database
-        google_drive_folder: Google Drive folder URL for this client
         client_profile: Client profile document file
         content_icp: Content ideal client profile document file  
         voice_style_guide: Voice and style guide document file
@@ -105,13 +73,6 @@ async def upload_client_documents(
     try:
         logger.info(f"Starting client document upload for project: {project_name}")
         
-        # Extract Google Drive folder ID from URL
-        try:
-            target_folder_id = extract_google_drive_folder_id(google_drive_folder)
-            logger.info(f"Extracted folder ID: {target_folder_id} from URL: {google_drive_folder}")
-        except ValueError as e:
-            logger.error(f"Invalid Google Drive folder URL: {e}")
-            raise HTTPException(status_code=400, detail=str(e))
         
         # Initialize services
         notion_service = NotionService()
@@ -171,7 +132,7 @@ async def upload_client_documents(
         logger.info(f"Creating Google Drive folder for client: {client_name}")
         folder_id, folder_url = await google_drive_service.create_client_folder(
             client_name, 
-            target_folder_id
+            config.target_google_drive_folder_id
         )
         
         # Step 3: Process and upload documents
@@ -307,7 +268,7 @@ async def test_upload_endpoint():
             "max_file_size_mb": config.max_file_size_mb,
             "allowed_file_types": config.allowed_file_types,
             "client_project_database_id": config.client_project_database_id,
-            "note": "Google Drive folder ID is now provided per upload request"
+            "target_google_drive_folder_id": config.target_google_drive_folder_id
         }
     }
 

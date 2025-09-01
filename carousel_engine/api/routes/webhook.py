@@ -29,36 +29,61 @@ async def notion_webhook(
     It processes page.updated events for carousel generation triggers.
     """
     try:
-        logger.info("Received Notion webhook", payload_type=payload.get("type"))
+        # Log the full payload for debugging
+        logger.info("Received Notion webhook", 
+                   payload_type=payload.get("type"), 
+                   payload_keys=list(payload.keys()),
+                   full_payload=payload)
         
-        # Validate webhook payload
-        await _validate_webhook_payload(request, payload)
+        # Handle different webhook formats
+        page_id = None
         
-        # Extract event details
-        event_type = payload.get("type")
+        # Check if it's a Notion Automation webhook (different format)
+        if "page_id" in payload or "id" in payload:
+            # Direct page reference - this is likely from Notion Automation
+            page_id = payload.get("page_id") or payload.get("id")
+            logger.info("Processing Notion Automation webhook", page_id=page_id)
         
-        if event_type == "page":
-            # Handle page update event
+        # Check if it's an official Notion API webhook
+        elif payload.get("type") == "page" and "data" in payload:
+            # Official Notion API webhook format
+            await _validate_webhook_payload(request, payload)
             page_data = payload.get("data", {})
             page_id = page_data.get("id")
-            
-            if not page_id:
-                raise WebhookValidationError("Missing page ID in webhook payload")
-            
-            logger.info("Processing page update", page_id=page_id)
-            
-            # Queue carousel generation in background
-            background_tasks.add_task(
-                _process_page_update,
-                page_id,
-                payload
-            )
-            
-            return {"status": "accepted", "page_id": page_id}
+            logger.info("Processing official Notion API webhook", page_id=page_id)
         
         else:
-            logger.info("Ignoring non-page webhook event", event_type=event_type)
-            return {"status": "ignored", "reason": f"Event type {event_type} not processed"}
+            # Unknown format - try to extract page_id from common locations
+            logger.warning("Unknown webhook format, attempting to extract page_id", payload=payload)
+            
+            # Try various common field names
+            for field in ["page_id", "id", "notion_page_id", "pageId"]:
+                if field in payload:
+                    page_id = payload[field]
+                    break
+            
+            # Try nested data
+            if not page_id and "data" in payload:
+                data = payload["data"]
+                for field in ["id", "page_id", "notion_page_id"]:
+                    if field in data:
+                        page_id = data[field]
+                        break
+        
+        if not page_id:
+            logger.error("Could not extract page_id from webhook payload", payload=payload)
+            raise HTTPException(status_code=400, detail="Missing page_id in webhook payload")
+        
+        logger.info("Processing page update", page_id=page_id)
+        
+        # Queue carousel generation in background
+        background_tasks.add_task(
+            _process_page_update,
+            page_id,
+            payload
+        )
+        
+        return {"status": "accepted", "page_id": page_id}
             
     except WebhookValidationError as e:
         logger.error("Webhook validation failed", error=str(e))

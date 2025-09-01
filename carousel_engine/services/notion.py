@@ -51,6 +51,9 @@ class NotionService:
             # Extract title
             title = self._extract_title(page)
             
+            # Extract properties first
+            properties = page.get("properties", {})
+            
             # Extract content text from blocks
             content = self._extract_content(blocks)
             
@@ -69,9 +72,6 @@ class NotionService:
             if not content.strip() and title:
                 content = title
                 logger.info(f"No block or property content found, using title as content: {len(content)} chars")
-            
-            # Extract properties
-            properties = page.get("properties", {})
             
             # Parse format and status
             format_prop = self._get_property_value(properties, "Format", CarouselFormat.FACEBOOK.value)

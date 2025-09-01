@@ -54,10 +54,21 @@ class NotionService:
             # Extract content text from blocks
             content = self._extract_content(blocks)
             
-            # If no content in blocks, use title as content (common for structured entries)
+            # If no content in blocks, try to extract from rich text properties
+            if not content.strip():
+                # Look for content in common rich text properties
+                content_properties = ["Copy", "Content", "Body", "Text", "Hook", "Description"]
+                for prop_name in content_properties:
+                    prop_content = self._get_rich_text_property(properties, prop_name)
+                    if prop_content and prop_content.strip():
+                        content = prop_content
+                        logger.info(f"Extracted content from '{prop_name}' property: {len(content)} chars")
+                        break
+            
+            # If still no content, use title as content (common for structured entries)
             if not content.strip() and title:
                 content = title
-                logger.info(f"No block content found, using title as content: {len(content)} chars")
+                logger.info(f"No block or property content found, using title as content: {len(content)} chars")
             
             # Extract properties
             properties = page.get("properties", {})
@@ -316,6 +327,18 @@ class NotionService:
         except Exception as e:
             logger.error(f"Error extracting property {property_name}: {e}")
             return default
+    
+    def _get_rich_text_property(self, properties: Dict[str, Any], property_name: str) -> str:
+        """Get rich text content from a property
+        
+        Args:
+            properties: Page properties dict
+            property_name: Name of rich text property
+            
+        Returns:
+            Rich text content as string
+        """
+        return self._get_property_value(properties, property_name, "")
     
     async def query_database(self, database_id: str, limit: int = 10, format_filter: str = None) -> list:
         """Query a Notion database for pages

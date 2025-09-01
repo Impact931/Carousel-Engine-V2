@@ -21,6 +21,7 @@ class Config(BaseSettings):
     notion_api_key: Optional[str] = Field(default=None, description="Notion API integration token")
     google_oauth_client_id: Optional[str] = Field(default=None, description="Google OAuth client ID")
     google_oauth_client_secret: Optional[str] = Field(default=None, description="Google OAuth client secret")
+    google_refresh_token: Optional[str] = Field(default=None, description="Google OAuth refresh token")
     openai_api_key: Optional[str] = Field(default=None, description="OpenAI API key for image generation")
     
     # Database & Content - Made optional for serverless compatibility

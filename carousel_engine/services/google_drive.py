@@ -37,6 +37,7 @@ class GoogleDriveService:
         """
         self.client_id = client_id or config.google_oauth_client_id
         self.client_secret = client_secret or config.google_oauth_client_secret
+        self.refresh_token = config.google_refresh_token
         self.token_file = 'google_drive_token.pickle'
         self.service = None  # Lazy initialization
         logger.info("Google Drive service created (OAuth will be initialized on first use)")
@@ -74,34 +75,66 @@ class GoogleDriveService:
         """Get or refresh OAuth credentials"""
         credentials = None
         
-        # Load existing token
+        # If we have a refresh token from environment, create credentials directly
+        if self.refresh_token:
+            logger.info("Using refresh token from environment variables")
+            credentials = Credentials(
+                token=None,
+                refresh_token=self.refresh_token,
+                client_id=self.client_id,
+                client_secret=self.client_secret,
+                token_uri="https://accounts.google.com/o/oauth2/token"
+            )
+            
+            # Refresh to get access token
+            try:
+                credentials.refresh(Request())
+                logger.info("Successfully refreshed credentials using environment refresh token")
+                
+                # Save the credentials for future use
+                try:
+                    with open(self.token_file, 'wb') as token:
+                        pickle.dump(credentials, token)
+                    logger.info(f"Saved credentials to {self.token_file}")
+                except Exception as e:
+                    logger.warning(f"Failed to save credentials: {e}")
+                
+                return credentials
+            except Exception as e:
+                logger.error(f"Failed to refresh credentials from environment: {e}")
+                credentials = None
+        
+        # Load existing token file if no refresh token in environment
         if os.path.exists(self.token_file):
-            with open(self.token_file, 'rb') as token:
-                credentials = pickle.load(token)
+            try:
+                with open(self.token_file, 'rb') as token:
+                    credentials = pickle.load(token)
+                logger.info("Loaded credentials from token file")
+            except Exception as e:
+                logger.warning(f"Failed to load token file: {e}")
+                credentials = None
         
         # If no valid credentials are available, initiate OAuth flow
         if not credentials or not credentials.valid:
             if credentials and credentials.expired and credentials.refresh_token:
                 try:
                     credentials.refresh(Request())
-                    logger.info("Refreshed Google OAuth credentials")
+                    logger.info("Refreshed Google OAuth credentials from token file")
+                    
+                    # Save refreshed credentials
+                    with open(self.token_file, 'wb') as token:
+                        pickle.dump(credentials, token)
+                        
                 except Exception as e:
                     logger.warning(f"Failed to refresh credentials: {e}")
                     credentials = None
             
             if not credentials:
-                # Create OAuth flow - for server-side apps, we need to handle this differently
-                # For now, we'll raise an error indicating manual OAuth setup is needed
                 raise GoogleDriveError(
                     "Google OAuth credentials not found or expired. "
-                    "Please run the OAuth setup process first. "
-                    "For testing purposes, you can use the Google OAuth playground "
-                    "or set up a proper OAuth flow in your application."
+                    "Please ensure GOOGLE_REFRESH_TOKEN environment variable is set, "
+                    "or run the OAuth setup process to create a token file."
                 )
-        
-        # Save the credentials for the next run
-        with open(self.token_file, 'wb') as token:
-            pickle.dump(credentials, token)
         
         return credentials
     

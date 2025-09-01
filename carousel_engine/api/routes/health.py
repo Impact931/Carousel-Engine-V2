@@ -14,13 +14,20 @@ router = APIRouter()
 async def health_check(request: Request):
     """Basic health check endpoint"""
     try:
-        # Get engine from app state
-        engine = request.app.state.engine
+        # Get engine using lazy initialization
+        get_engine = getattr(request.app.state, 'get_engine', None)
+        if not get_engine:
+            return {
+                "status": "unhealthy",
+                "reason": "Engine factory not available"
+            }
+        
+        engine = get_engine()
         
         if not engine:
             return {
                 "status": "unhealthy",
-                "reason": "Engine not initialized"
+                "reason": "Engine initialization failed"
             }
         
         # Perform comprehensive health check
@@ -48,10 +55,14 @@ async def health_check(request: Request):
 async def services_health(request: Request):
     """Detailed service health check"""
     try:
-        engine = request.app.state.engine
+        get_engine = getattr(request.app.state, 'get_engine', None)
+        if not get_engine:
+            return {"error": "Engine factory not available"}
+        
+        engine = get_engine()
         
         if not engine:
-            return {"error": "Engine not initialized"}
+            return {"error": "Engine initialization failed"}
         
         health_status = await engine.health_check()
         return health_status["services"]
@@ -65,10 +76,14 @@ async def services_health(request: Request):
 async def health_metrics(request: Request):
     """Get processing metrics for monitoring"""
     try:
-        engine = request.app.state.engine
+        get_engine = getattr(request.app.state, 'get_engine', None)
+        if not get_engine:
+            return {"error": "Engine factory not available"}
+        
+        engine = get_engine()
         
         if not engine:
-            return {"error": "Engine not initialized"}
+            return {"error": "Engine initialization failed"}
         
         metrics = engine.get_all_metrics()
         

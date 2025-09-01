@@ -36,42 +36,40 @@ structlog.configure(
 
 logger = structlog.get_logger(__name__)
 
-# Global engine instance
+# Global engine instance (lazy initialization for serverless)
 engine = None
+
+
+def get_or_create_engine():
+    """Get or create the engine instance with lazy initialization"""
+    global engine
+    if engine is None:
+        try:
+            logger.info("Initializing Carousel Engine v2 (lazy initialization)", version=config.version)
+            engine = CarouselEngine()
+            logger.info("Carousel Engine v2 initialized successfully")
+        except Exception as e:
+            logger.error("Failed to initialize Carousel Engine", error=str(e))
+            # Return None to handle gracefully in endpoints
+            return None
+    return engine
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan manager"""
-    global engine
-    
+    """Application lifespan manager - minimal for serverless compatibility"""
     # Startup
-    logger.info("Starting Carousel Engine v2", version=config.version)
+    logger.info("Starting Carousel Engine v2 Application", version=config.version)
     
-    try:
-        # Initialize engine
-        engine = CarouselEngine()
-        
-        # Perform health check
-        health_status = await engine.health_check()
-        logger.info("Health check completed", status=health_status)
-        
-        # Check for any unhealthy services
-        unhealthy = [k for k, v in health_status["services"].items() if "unhealthy" in str(v)]
-        if unhealthy:
-            logger.warning("Some services are unhealthy", services=unhealthy)
-        
-        app.state.engine = engine
-        logger.info("Carousel Engine v2 started successfully")
-        
-    except Exception as e:
-        logger.error("Failed to start Carousel Engine", error=str(e))
-        raise
+    # Don't initialize engine here for serverless compatibility
+    # Engine will be initialized on first request via get_or_create_engine()
+    app.state.get_engine = get_or_create_engine
+    logger.info("Carousel Engine v2 application started (engine will initialize on first use)")
     
     yield
     
     # Shutdown
-    logger.info("Shutting down Carousel Engine v2")
+    logger.info("Shutting down Carousel Engine v2 application")
 
 
 # Create FastAPI application
@@ -93,8 +91,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="carousel_engine/static"), name="static")
+# Mount static files (conditional for serverless environments)
+try:
+    import os
+    static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+    if os.path.exists(static_dir):
+        app.mount("/static", StaticFiles(directory=static_dir), name="static")
+        logger.info(f"Static files mounted from: {static_dir}")
+    else:
+        logger.warning(f"Static directory not found: {static_dir}")
+except Exception as e:
+    logger.warning(f"Failed to mount static files: {e}")
 
 # Include route modules
 app.include_router(webhook.router, prefix="/webhook", tags=["webhook"])

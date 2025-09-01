@@ -40,7 +40,7 @@ class CarouselEngine:
         image_processor: Optional[ImageProcessor] = None,
         content_processor: Optional[ContentProcessor] = None
     ):
-        """Initialize Carousel Engine
+        """Initialize Carousel Engine with conditional service initialization
         
         Args:
             notion_service: Notion API service instance
@@ -49,11 +49,37 @@ class CarouselEngine:
             image_processor: Image processing utility instance
             content_processor: Content processing utility instance
         """
-        self.notion = notion_service or NotionService()
-        self.google_drive = google_drive_service or GoogleDriveService()
-        self.openai = openai_service or OpenAIService()
-        self.image_processor = image_processor or ImageProcessor()
-        self.content_processor = content_processor or ContentProcessor()
+        # Initialize services with error handling for serverless environments
+        self.notion = None
+        self.google_drive = None
+        self.openai = None
+        self.image_processor = None
+        self.content_processor = None
+        
+        try:
+            self.notion = notion_service or NotionService()
+        except Exception as e:
+            logger.warning(f"Failed to initialize Notion service: {e}")
+        
+        try:
+            self.google_drive = google_drive_service or GoogleDriveService()
+        except Exception as e:
+            logger.warning(f"Failed to initialize Google Drive service: {e}")
+        
+        try:
+            self.openai = openai_service or OpenAIService()
+        except Exception as e:
+            logger.warning(f"Failed to initialize OpenAI service: {e}")
+        
+        try:
+            self.image_processor = image_processor or ImageProcessor()
+        except Exception as e:
+            logger.warning(f"Failed to initialize Image Processor: {e}")
+        
+        try:
+            self.content_processor = content_processor or ContentProcessor()
+        except Exception as e:
+            logger.warning(f"Failed to initialize Content Processor: {e}")
         
         # Performance tracking
         self.metrics = {}

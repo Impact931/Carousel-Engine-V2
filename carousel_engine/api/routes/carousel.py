@@ -26,11 +26,14 @@ async def generate_carousel(
     try:
         logger.info("Manual carousel generation requested", page_id=request.notion_page_id)
         
-        # Get engine from app state
-        engine = req.app.state.engine
+        # Get engine using lazy initialization
+        get_engine = getattr(req.app.state, 'get_engine', None)
+        if not get_engine:
+            raise HTTPException(status_code=503, detail="Engine factory not available")
         
+        engine = get_engine()
         if not engine:
-            raise HTTPException(status_code=500, detail="Engine not initialized")
+            raise HTTPException(status_code=503, detail="Engine initialization failed")
         
         # Generate carousel
         result = await engine.generate_carousel(
@@ -70,11 +73,14 @@ async def generate_carousel_async(
     try:
         logger.info("Async carousel generation requested", page_id=request.notion_page_id)
         
-        # Get engine from app state
-        engine = req.app.state.engine
+        # Get engine using lazy initialization
+        get_engine = getattr(req.app.state, 'get_engine', None)
+        if not get_engine:
+            raise HTTPException(status_code=503, detail="Engine factory not available")
         
+        engine = get_engine()
         if not engine:
-            raise HTTPException(status_code=500, detail="Engine not initialized")
+            raise HTTPException(status_code=503, detail="Engine initialization failed")
         
         # Queue generation in background
         background_tasks.add_task(
@@ -105,11 +111,14 @@ async def get_carousel_status(page_id: str, req: Request) -> Dict[str, Any]:
     try:
         logger.info("Carousel status requested", page_id=page_id)
         
-        # Get engine from app state
-        engine = req.app.state.engine
+        # Get engine using lazy initialization
+        get_engine = getattr(req.app.state, 'get_engine', None)
+        if not get_engine:
+            raise HTTPException(status_code=503, detail="Engine factory not available")
         
+        engine = get_engine()
         if not engine:
-            raise HTTPException(status_code=500, detail="Engine not initialized")
+            raise HTTPException(status_code=503, detail="Engine initialization failed")
         
         # Get page status from Notion
         page = await engine.notion.get_page(page_id)
@@ -146,11 +155,14 @@ async def get_carousel_status(page_id: str, req: Request) -> Dict[str, Any]:
 async def list_recent_carousels(req: Request, limit: int = 10) -> Dict[str, Any]:
     """List recent carousel processing metrics"""
     try:
-        # Get engine from app state
-        engine = req.app.state.engine
+        # Get engine using lazy initialization
+        get_engine = getattr(req.app.state, 'get_engine', None)
+        if not get_engine:
+            raise HTTPException(status_code=503, detail="Engine factory not available")
         
+        engine = get_engine()
         if not engine:
-            raise HTTPException(status_code=500, detail="Engine not initialized")
+            raise HTTPException(status_code=503, detail="Engine initialization failed")
         
         all_metrics = engine.get_all_metrics()
         

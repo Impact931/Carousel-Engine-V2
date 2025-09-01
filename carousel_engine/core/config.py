@@ -17,14 +17,14 @@ class Config(BaseSettings):
     debug: bool = Field(default=False, description="Debug mode")
     environment: str = Field(default="production", description="Environment")
     
-    # API Keys
-    notion_api_key: str = Field(..., description="Notion API integration token")
+    # API Keys - Made optional for serverless compatibility
+    notion_api_key: Optional[str] = Field(default=None, description="Notion API integration token")
     google_oauth_client_id: Optional[str] = Field(default=None, description="Google OAuth client ID")
     google_oauth_client_secret: Optional[str] = Field(default=None, description="Google OAuth client secret")
-    openai_api_key: str = Field(..., description="OpenAI API key for image generation")
+    openai_api_key: Optional[str] = Field(default=None, description="OpenAI API key for image generation")
     
-    # Database & Content
-    notion_database_id: str = Field(..., description="Notion database ID for content")
+    # Database & Content - Made optional for serverless compatibility
+    notion_database_id: Optional[str] = Field(default=None, description="Notion database ID for content")
     
     # Image Generation Settings
     image_width: int = Field(default=1080, description="Generated image width in pixels")
@@ -75,6 +75,26 @@ class Config(BaseSettings):
     def is_production(self) -> bool:
         """Check if running in production mode"""
         return self.environment.lower() in ("production", "prod")
+    
+    def validate_required_for_carousel_generation(self) -> bool:
+        """Validate that required fields are available for carousel generation"""
+        required_fields = {
+            'notion_api_key': self.notion_api_key,
+            'notion_database_id': self.notion_database_id,
+            'openai_api_key': self.openai_api_key
+        }
+        
+        missing = [field for field, value in required_fields.items() if not value]
+        if missing:
+            return False, f"Missing required configuration: {', '.join(missing)}"
+        
+        return True, "All required configuration present"
+    
+    def validate_required_for_google_drive(self) -> bool:
+        """Validate that required fields are available for Google Drive operations"""
+        if not self.google_oauth_client_id or not self.google_oauth_client_secret:
+            return False, "Missing Google OAuth credentials"
+        return True, "Google Drive configuration present"
 
 
 # Global config instance

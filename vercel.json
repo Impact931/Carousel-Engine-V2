@@ -1,7 +1,7 @@
 {
   "builds": [
     {
-      "src": "carousel_engine/api/main.py",
+      "src": "api/index.py",
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "50mb"
@@ -11,10 +11,15 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "carousel_engine/api/main.py"
+      "dest": "api/index.py"
     }
   ],
   "env": {
     "PYTHON_VERSION": "3.11"
+  },
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 300
+    }
   }
 }

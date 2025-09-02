@@ -140,8 +140,8 @@ class ImageProcessor:
             slide_number: Slide number
         """
         try:
-            # Calculate responsive font size - increased for better readability
-            font_size = int(width * 0.045)  # Increased from width//18 to 4.5% of image width
+            # Use large 40-50pt font for carousel readability
+            font_size = 48  # Fixed 48pt font size for maximum carousel readability
             content_font = self._get_lato_font(font_size)
             
             # Text box width should be 90% of total image width

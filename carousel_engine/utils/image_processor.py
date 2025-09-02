@@ -49,8 +49,11 @@ class ImageProcessor:
             # Load background image
             background = Image.open(BytesIO(background_image_data))
             
-            # No resize needed - DALL-E now generates correct 1:1 aspect ratio
-            # Removed forced resize to prevent distortion
+            # Ensure background matches expected dimensions
+            if background.size != (self.width, self.height):
+                # Only resize if dimensions don't match to maintain 1:1 ratio
+                background = background.resize((self.width, self.height), Image.Resampling.LANCZOS)
+                logger.debug(f"Resized background from {background.size} to {self.width}x{self.height}")
             
             # Ensure RGB mode
             if background.mode != 'RGB':
@@ -180,7 +183,15 @@ class ImageProcessor:
             background_image = draw._image
             background_rgba = background_image.convert('RGBA')
             background_rgba = Image.alpha_composite(background_rgba, box_overlay)
-            draw._image.paste(background_rgba.convert('RGB'))
+            
+            # Convert back to RGB and create new draw context for text rendering
+            final_image = background_rgba.convert('RGB')
+            
+            # Replace the original image with the composited version
+            draw._image.paste(final_image)
+            
+            # Create a new draw context on the final composited image
+            final_draw = ImageDraw.Draw(draw._image)
             
             # Choose dark text color that complements real estate theme
             text_color = (64, 64, 64)  # Dark gray - readable and warm
@@ -189,10 +200,10 @@ class ImageProcessor:
             text_y = box_y + box_padding
             for line in lines:
                 # Center each line within the 90% width box
-                line_width = draw.textlength(line, font=content_font)
+                line_width = final_draw.textlength(line, font=content_font)
                 text_x = text_box_left_margin + (text_box_width - line_width) // 2
                 
-                draw.text(
+                final_draw.text(
                     (text_x, text_y),
                     line,
                     font=content_font,
@@ -200,9 +211,9 @@ class ImageProcessor:
                 )
                 text_y += line_height
             
-            # Add slide number if provided
+            # Add slide number if provided (using the new draw context)
             if slide_number is not None:
-                self._add_slide_number(draw, slide_number, width, height)
+                self._add_slide_number(final_draw, slide_number, width, height)
             
             logger.debug(f"Added content text with {len(lines)} lines")
             

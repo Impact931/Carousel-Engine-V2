@@ -429,7 +429,18 @@ For every piece of content:
 
 **MANDATORY REQUIREMENT: Count the number of distinct audience segments/ICPs mentioned in the provided documents and ensure you create a complete profile for each one. DO NOT STOP generating until you have addressed every single ICP segment found in the analysis.**
 
-**Generate the complete, comprehensive system message following this template. Do not stop until every section is fully completed with master-level strategic depth and ALL audience segments are thoroughly analyzed.**"""
+**CRITICAL COMPLETION REQUIREMENTS:**
+1. **EXPECTED ICP COUNT**: Based on document analysis, expect 5 DISTINCT ICPs:
+   - Hyperlocal Educator/Public Servant
+   - Overwhelmed Millennial Dream Builder  
+   - Instagram Dreamer
+   - Lifestyle Upgrader
+   - Strategic Relocator
+2. **GENERATE COMPLETE PROFILES**: Create full profiles for ALL 5 ICPs - do not stop at 2 or 3
+3. **FINISH ALL SECTIONS**: Complete every single section including Performance Benchmarks and Execution Instructions
+4. **NO MID-SENTENCE TRUNCATION**: Finish every sentence, every section, every framework completely
+
+**Generate the complete, comprehensive system message following this template. Continue generating until you have profiled ALL 5 ICPs and completed every single section with master-level strategic depth.**"""
 
             # Use OpenAI service to distill content
             from ..services.openai_service import OpenAIService
@@ -437,8 +448,8 @@ For every piece of content:
             
             response = await openai_service.generate_text_completion(
                 prompt=distillation_prompt,
-                max_tokens=4000,  # Significantly increased for comprehensive multi-ICP analysis
-                temperature=0.1  # Lower for maximum consistency and thoroughness
+                max_tokens=8000,  # Removed limits - ensure complete output for all 5+ ICPs
+                temperature=0.05  # Minimal temperature for absolute consistency and thoroughness
             )
             
             if response and response.strip():

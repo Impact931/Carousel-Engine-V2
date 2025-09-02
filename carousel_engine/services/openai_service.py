@@ -243,7 +243,7 @@ class OpenAIService:
     async def generate_text_completion(
         self,
         prompt: str,
-        max_tokens: int = 500,
+        max_tokens: int = 8000,  # Increased default for comprehensive outputs
         temperature: float = 0.3
     ) -> str:
         """Generate text completion using GPT

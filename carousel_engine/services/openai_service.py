@@ -631,7 +631,7 @@ class OpenAIService:
         max_slides: int, 
         lines_per_slide: int
     ) -> str:
-        """Create prompt for content optimization
+        """Create prompt for content optimization with strict character limits for 80pt font
         
         Args:
             content: Raw content
@@ -639,105 +639,51 @@ class OpenAIService:
             lines_per_slide: Lines per slide
             
         Returns:
-            Content optimization prompt
+            Content optimization prompt with technical constraints
         """
         return (
-            f"You are a master storyteller and Instagram carousel strategist who creates compelling narrative arcs "
-            f"that flow seamlessly from slide 1 to slide 7. Your carousels read like cohesive visual stories where "
-            f"each slide naturally leads to the next, creating irresistible momentum that keeps readers engaged.\n\n"
+            f"You are creating Instagram carousel slides with STRICT technical constraints for 80pt font rendering.\n\n"
             
-            f"CRITICAL NARRATIVE PRINCIPLES:\n"
-            f"- Create ONE unified story that spans ALL slides - not individual standalone pieces\n"
-            f"- Each slide must feel INCOMPLETE without the next one (natural curiosity drive)\n"
-            f"- Use connecting words and transitional phrases to bridge slides smoothly\n"
-            f"- Build emotional momentum that crescendos toward the final slide\n"
-            f"- Make readers feel they're missing crucial information if they stop swiping\n"
-            f"- Every slide should answer the previous slide's implicit question while raising a new one\n\n"
+            f"CRITICAL TECHNICAL LIMITS (MUST NOT EXCEED):\n"
+            f"- Each slide: MAXIMUM 120 characters total (including spaces)\n"
+            f"- Each line: MAXIMUM 20-25 characters (for 80pt font width)\n"
+            f"- Lines per slide: EXACTLY {lines_per_slide} lines (no more, no less)\n"
+            f"- Total slides: 4-{max_slides} slides maximum\n\n"
             
-            f"SEAMLESS STORY ARC STRUCTURE (4-7 slides):\n"
-            f"SLIDE 1: STORY HOOK - Open an emotional loop with a compelling question or revelation\n"
-            f"  • Start with 'What if...', 'Most people don't realize...', 'Here's the truth...'\n"
-            f"  • Create immediate intrigue that DEMANDS the next slide\n"
-            f"  • Leave readers thinking 'I need to know more...'\n\n"
+            f"CHARACTER COUNTING EXAMPLES:\n"
+            f"✅ GOOD (22 chars): 'Home prices rising'\n"
+            f"✅ GOOD (24 chars): 'Market shifts quickly'\n"
+            f"❌ BAD (35 chars): 'Real estate market conditions are changing'\n"
+            f"❌ BAD (45 chars): 'Understanding current market trends and pricing'\n\n"
             
-            f"SLIDE 2: DEVELOP TENSION - Build on slide 1's hook with deeper context\n"
-            f"  • Use transition phrases: 'But here's what happens...', 'The problem is...', 'This is why...'\n"
-            f"  • Escalate the emotional stakes from slide 1\n"
-            f"  • End with anticipation for the solution/insight coming next\n\n"
+            f"NARRATIVE FLOW (within technical limits):\n"
+            f"- Create story progression across slides\n"
+            f"- Use connecting words: 'But', 'Now', 'So', 'Yet'\n"
+            f"- Build curiosity with short, punchy statements\n"
+            f"- End with clear call-to-action\n\n"
             
-            f"SLIDE 3: FIRST REVELATION - Deliver key insight that builds on slides 1-2\n"
-            f"  • Connect with: 'That's when I discovered...', 'Here's what changed everything...', 'The breakthrough came when...'\n"
-            f"  • Provide the 'aha moment' that explains slide 2's tension\n"
-            f"  • Tease that there's more to the story\n\n"
+            f"SLIDE STRUCTURE:\n"
+            f"SLIDE 1: Hook (problem/question) - MAX 120 chars\n"
+            f"SLIDE 2: Context/tension - MAX 120 chars\n"
+            f"SLIDE 3: Insight/solution - MAX 120 chars\n"
+            f"SLIDE 4+: Proof/action - MAX 120 chars each\n\n"
             
-            f"SLIDE 4: DEEPER INSIGHT - Expand the revelation with proof/details\n"
-            f"  • Transition with: 'What this really means is...', 'Here's why this matters...', 'The real impact was...'\n"
-            f"  • Build credibility for slide 3's revelation\n"
-            f"  • Create anticipation for the practical application\n\n"
+            f"WRITING CONSTRAINTS:\n"
+            f"- Use SHORT words (avoid 'understanding', use 'knowing')\n"
+            f"- Drop articles when possible ('Market rises' not 'The market rises')\n"
+            f"- Use contractions ('Don't' not 'Do not')\n"
+            f"- Eliminate filler words completely\n"
+            f"- Every character must add value\n\n"
             
-            f"SLIDE 5: TRANSFORMATION - Show the outcome/solution in action\n"
-            f"  • Connect with: 'So we started...', 'The result was...', 'Now when I...'\n"
-            f"  • Demonstrate real-world application of previous insights\n"
-            f"  • Build toward the final emotional payoff\n\n"
+            f"FORMATTING RULES:\n"
+            f"- Start with 'SLIDE 1:' immediately\n"
+            f"- Each line on new line within slide\n"
+            f"- No explanations or meta-text\n"
+            f"- Count characters obsessively\n\n"
             
-            f"SLIDE 6 (if needed): PROOF/REINFORCEMENT - Strengthen the transformation story\n"
-            f"  • Use: 'And the best part...', 'What's even better...', 'This led to...'\n"
-            f"  • Provide evidence or additional benefits\n"
-            f"  • Set up the final call-to-action naturally\n\n"
+            f"Before writing each slide, mentally count characters. If any slide exceeds 120 characters, "
+            f"rewrite with shorter words and phrases.\n\n"
             
-            f"SLIDE 7: EMOTIONAL RESOLUTION + CTA - Close the story loop with clear action\n"
-            f"  • Conclude with: 'The truth is...', 'That's why I now...', 'Ready to experience...'\n"
-            f"  • Provide satisfying conclusion to the story journey\n"
-            f"  • Make the CTA feel like a natural next step, not a sales pitch\n\n"
-            
-            f"SEAMLESS TRANSITION TECHNIQUES:\n"
-            f"- Use bridging phrases: 'But that's not all...', 'Here's where it gets interesting...', 'Then something changed...'\n"
-            f"- Create sentence fragments that complete across slides: 'The secret is...' → next slide: 'Understanding this one thing.'\n"
-            f"- Reference previous slides: 'Remember what I said about...', 'This connects to...', 'Building on that...'\n"
-            f"- Use progressive revelation: Each slide unveils another layer of the same core story\n"
-            f"- End slides with forward momentum: 'But wait...', 'However...', 'The real magic happens when...'\n\n"
-            
-            f"NARRATIVE COHESION RULES:\n"
-            f"- NEVER create slides that could work in isolation - they must depend on each other\n"
-            f"- Each slide should feel like the next logical chapter in an unfolding story\n"
-            f"- Use consistent terminology and references throughout (create internal consistency)\n"
-            f"- Build emotional intensity progressively - start calm, build to crescendo, resolve satisfyingly\n"
-            f"- The story should feel incomplete if any single slide is removed\n"
-            f"- Reader should feel compelled to continue because the narrative isn't finished yet\n\n"
-            
-            f"MOBILE-OPTIMIZED TEXT RULES:\n"
-            f"- MAX {lines_per_slide} lines per slide - EXACTLY this limit\n"
-            f"- Use powerful, concise language that advances the story\n"
-            f"- Every word must either develop character, advance plot, or build emotion\n"
-            f"- Write for continuous reading flow, not scanning individual pieces\n"
-            f"- Use 'you' to maintain intimate story connection throughout\n"
-            f"- Vary sentence length and rhythm to create natural reading flow\n\n"
-            
-            f"STORY MOMENTUM TECHNIQUES:\n"
-            f"- Open loops that close in later slides: 'I learned something that changed everything' → reveal later\n"
-            f"- Progressive stakes-raising: Each slide should increase emotional investment\n"
-            f"- Cliffhanger endings: 'But then I realized something shocking...'\n"
-            f"- Callback references: 'Remember that problem from slide 1? Here's how it ended.'\n"
-            f"- Emotional peaks and valleys: Create rhythm through varying intensity\n"
-            f"- Satisfying conclusion: The final slide must feel like a earned resolution\n\n"
-            
-            f"CRITICAL FORMATTING REQUIREMENTS:\n"
-            f"- Start immediately with 'SLIDE 1:' followed by the actual slide content\n"
-            f"- Each slide should contain ONLY the text that will appear on the slide\n"
-            f"- No introductory text, explanations, or meta-commentary\n"
-            f"- No phrases like 'Here's your carousel' or 'I'll create'\n"
-            f"- Focus entirely on creating the connected narrative story\n\n"
-            
-            f"Transform the following content into a compelling 4-7 slide story arc where:\n"
-            f"• Each slide flows naturally into the next\n"
-            f"• The narrative feels incomplete without all slides\n"
-            f"• Readers are emotionally invested in reaching the conclusion\n"
-            f"• The final slide provides satisfying resolution + natural CTA\n\n"
-            
-            f"Format your response EXACTLY as:\n"
-            f"SLIDE 1:\n[story hook text that creates curiosity]\n\n"
-            f"SLIDE 2:\n[development that builds on slide 1]\n\n"
-            f"... continuing the connected narrative through all slides\n\n"
             f"Content to transform:\n{content}"
         )
     

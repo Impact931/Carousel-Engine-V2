@@ -9,11 +9,16 @@ from io import BytesIO
 from typing import Tuple, Optional
 from PIL import Image, ImageDraw, ImageFont
 import requests
+import threading
 
 from ..core.config import config
 from ..core.exceptions import ImageProcessingError
 
 logger = logging.getLogger(__name__)
+
+# Thread-safe font cache
+_font_cache = {}
+_font_cache_lock = threading.Lock()
 
 
 class ImageProcessor:
@@ -379,7 +384,7 @@ class ImageProcessor:
             return ImageFont.load_default()
     
     def _get_lato_font(self, size: int) -> ImageFont.ImageFont:
-        """Get Lato font for text rendering with CRITICAL fallback that preserves size
+        """Get Lato font for text rendering with thread-safe caching and CRITICAL fallback
         
         Args:
             size: Font size in points
@@ -387,6 +392,13 @@ class ImageProcessor:
         Returns:
             PIL ImageFont object that WILL respect the size parameter
         """
+        # Thread-safe cache check
+        cache_key = f"lato_{size}"
+        with _font_cache_lock:
+            if cache_key in _font_cache:
+                logger.debug(f"📋 Font cache hit for {size}pt")
+                return _font_cache[cache_key]
+        
         try:
             # FIRST: Try bundled font (this will work in production!)
             bundled_font_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'fonts', 'opensans.ttf')
@@ -394,6 +406,11 @@ class ImageProcessor:
                 if os.path.exists(bundled_font_path):
                     font = ImageFont.truetype(bundled_font_path, size)
                     logger.info(f"✅ SUCCESS: Loaded bundled OpenSans font at {size}pt from {bundled_font_path}")
+                    
+                    # Cache the successful font load
+                    with _font_cache_lock:
+                        _font_cache[cache_key] = font
+                    
                     return font
                 else:
                     logger.warning(f"Bundled font not found at {bundled_font_path}")
@@ -446,6 +463,11 @@ class ImageProcessor:
                 try:
                     font = ImageFont.truetype(font_path, size)
                     logger.info(f"✅ Successfully loaded system font: {font_path} at {size}pt")
+                    
+                    # Cache the successful font load
+                    with _font_cache_lock:
+                        _font_cache[cache_key] = font
+                    
                     return font
                 except (OSError, IOError):
                     continue
@@ -475,6 +497,10 @@ class ImageProcessor:
                             font = ImageFont.truetype(temp_font_path, size)
                             logger.info(f"✅ SUCCESS: Downloaded and loaded web font at {size}pt!")
                             
+                            # Cache the successful font load
+                            with _font_cache_lock:
+                                _font_cache[cache_key] = font
+                            
                             # Clean up temp file
                             try:
                                 os.unlink(temp_font_path)
@@ -502,6 +528,10 @@ class ImageProcessor:
                     logger.error(f"💀 TEXT WILL BE TINY! This is the root cause of unreadable text!")
                 except:
                     logger.error(f"💀 FONT MEASUREMENT FAILED - text will be compromised")
+                
+                # Cache even the fallback font to prevent repeated failures
+                with _font_cache_lock:
+                    _font_cache[cache_key] = default_font
                 
                 return default_font
                 

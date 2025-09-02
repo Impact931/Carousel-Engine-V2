@@ -224,7 +224,7 @@ class GoogleDriveService:
         folder_id: str,
         mime_type: str = 'image/png'
     ) -> Tuple[str, str]:
-        """Upload an image to Google Drive
+        """Upload an image to Google Drive with timeout handling and retry logic
         
         Args:
             image_data: Image data as bytes
@@ -238,42 +238,67 @@ class GoogleDriveService:
         Raises:
             GoogleDriveError: If upload fails
         """
-        try:
-            logger.info(f"Uploading image {filename} to folder {folder_id}")
-            
-            # Prepare file metadata
-            file_metadata = {
-                'name': filename,
-                'parents': [folder_id]
-            }
-            
-            # Create media upload
-            media = MediaIoBaseUpload(
-                BytesIO(image_data),
-                mimetype=mime_type,
-                resumable=True
-            )
-            
-            # Upload file
-            file = self.service.files().create(
-                body=file_metadata,
-                media_body=media,
-                fields='id, webViewLink, webContentLink'
-            ).execute()
-            
-            file_id = file.get('id')
-            file_url = file.get('webViewLink')
-            
-            # Make file publicly viewable
-            await self._make_file_public(file_id)
-            
-            logger.info(f"Successfully uploaded image {filename} with ID: {file_id}")
-            return file_id, file_url
-            
-        except Exception as e:
-            error_msg = f"Failed to upload image {filename} to Google Drive: {e}"
-            logger.error(error_msg)
-            raise GoogleDriveError(error_msg, folder_id=folder_id)
+        import asyncio
+        from asyncio import timeout
+        
+        max_retries = 3
+        timeout_seconds = 240  # 4 minutes for Vercel limit
+        
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"Uploading image {filename} to folder {folder_id} (attempt {attempt + 1}/{max_retries})")
+                
+                # Use asyncio timeout to prevent hanging
+                async with timeout(timeout_seconds):
+                    self._ensure_service_initialized()
+                    
+                    # Prepare file metadata
+                    file_metadata = {
+                        'name': filename,
+                        'parents': [folder_id]
+                    }
+                    
+                    # Create media upload with smaller chunk size for better timeout handling
+                    media = MediaIoBaseUpload(
+                        BytesIO(image_data),
+                        mimetype=mime_type,
+                        resumable=True,
+                        chunksize=1024*256  # 256KB chunks
+                    )
+                    
+                    # Upload file
+                    file = self.service.files().create(
+                        body=file_metadata,
+                        media_body=media,
+                        fields='id, webViewLink, webContentLink'
+                    ).execute()
+                    
+                    file_id = file.get('id')
+                    file_url = file.get('webViewLink')
+                    
+                    # Make file publicly viewable
+                    await self._make_file_public(file_id)
+                    
+                    logger.info(f"Successfully uploaded image {filename} with ID: {file_id}")
+                    return file_id, file_url
+                    
+            except asyncio.TimeoutError:
+                logger.warning(f"Upload timeout for {filename} on attempt {attempt + 1}")
+                if attempt == max_retries - 1:
+                    error_msg = f"Upload timeout for {filename} after {max_retries} attempts"
+                    logger.error(error_msg)
+                    raise GoogleDriveError(error_msg, folder_id=folder_id)
+                await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                continue
+                
+            except Exception as e:
+                logger.warning(f"Upload failed for {filename} on attempt {attempt + 1}: {e}")
+                if attempt == max_retries - 1:
+                    error_msg = f"Failed to upload image {filename} to Google Drive after {max_retries} attempts: {e}"
+                    logger.error(error_msg)
+                    raise GoogleDriveError(error_msg, folder_id=folder_id)
+                await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                continue
     
     async def upload_multiple_images(
         self, 
@@ -527,7 +552,7 @@ class GoogleDriveService:
         mime_type: str,
         folder_id: str
     ) -> Tuple[str, str]:
-        """Upload a file to Google Drive
+        """Upload a file to Google Drive with timeout handling and retry logic
         
         Args:
             file_data: File data as bytes
@@ -541,40 +566,67 @@ class GoogleDriveService:
         Raises:
             GoogleDriveError: If upload fails
         """
-        try:
-            # Create file metadata
-            file_metadata = {
-                'name': filename,
-                'parents': [folder_id]
-            }
-            
-            # Create media upload
-            media = MediaIoBaseUpload(
-                BytesIO(file_data),
-                mimetype=mime_type,
-                resumable=True
-            )
-            
-            # Upload file
-            file = self.service.files().create(
-                body=file_metadata,
-                media_body=media,
-                fields='id, webViewLink, webContentLink'
-            ).execute()
-            
-            file_id = file.get('id')
-            file_url = file.get('webViewLink')
-            
-            # Make file publicly viewable
-            await self._make_file_public(file_id)
-            
-            logger.info(f"Successfully uploaded file {filename} with ID: {file_id}")
-            return file_id, file_url
-            
-        except Exception as e:
-            error_msg = f"Failed to upload file {filename} to Google Drive: {e}"
-            logger.error(error_msg)
-            raise GoogleDriveError(error_msg, folder_id=folder_id)
+        import asyncio
+        from asyncio import timeout
+        
+        max_retries = 3
+        timeout_seconds = 240  # 4 minutes for Vercel limit
+        
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"Uploading file {filename} (attempt {attempt + 1}/{max_retries})")
+                
+                # Use asyncio timeout to prevent hanging
+                async with timeout(timeout_seconds):
+                    self._ensure_service_initialized()
+                    
+                    # Create file metadata
+                    file_metadata = {
+                        'name': filename,
+                        'parents': [folder_id]
+                    }
+                    
+                    # Create media upload with smaller chunk size for better timeout handling
+                    media = MediaIoBaseUpload(
+                        BytesIO(file_data),
+                        mimetype=mime_type,
+                        resumable=True,
+                        chunksize=1024*256  # 256KB chunks
+                    )
+                    
+                    # Upload file
+                    file = self.service.files().create(
+                        body=file_metadata,
+                        media_body=media,
+                        fields='id, webViewLink, webContentLink'
+                    ).execute()
+                    
+                    file_id = file.get('id')
+                    file_url = file.get('webViewLink')
+                    
+                    # Make file publicly viewable
+                    await self._make_file_public(file_id)
+                    
+                    logger.info(f"Successfully uploaded file {filename} with ID: {file_id}")
+                    return file_id, file_url
+                    
+            except asyncio.TimeoutError:
+                logger.warning(f"Upload timeout for {filename} on attempt {attempt + 1}")
+                if attempt == max_retries - 1:
+                    error_msg = f"Upload timeout for {filename} after {max_retries} attempts"
+                    logger.error(error_msg)
+                    raise GoogleDriveError(error_msg, folder_id=folder_id)
+                await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                continue
+                
+            except Exception as e:
+                logger.warning(f"Upload failed for {filename} on attempt {attempt + 1}: {e}")
+                if attempt == max_retries - 1:
+                    error_msg = f"Failed to upload file {filename} to Google Drive after {max_retries} attempts: {e}"
+                    logger.error(error_msg)
+                    raise GoogleDriveError(error_msg, folder_id=folder_id)
+                await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                continue
     
     def _generate_serial_number(self, client_name: str, existing_folders: List[dict]) -> int:
         """Generate serial number for client folder

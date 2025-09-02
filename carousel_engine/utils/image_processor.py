@@ -93,8 +93,8 @@ class ImageProcessor:
             height: Image height
         """
         try:
-            # Use large fixed font for title - even bigger than content for hierarchy
-            font_size = 60  # Fixed 60pt font size for title - larger than content (48pt)
+            # Use LARGE fixed font for title - much bigger for better readability
+            font_size = 80  # Fixed 80pt font size for title - much larger for visibility
             title_font = self._get_lato_font(font_size)
             
             # Text styling for title
@@ -144,8 +144,8 @@ class ImageProcessor:
             slide_number: Slide number
         """
         try:
-            # Use large 40-50pt font for carousel readability
-            font_size = 48  # Fixed 48pt font size for maximum carousel readability
+            # Use LARGE font for content - minimum 60pt for better readability
+            font_size = 64  # Fixed 64pt font size for maximum carousel readability - much larger!
             content_font = self._get_lato_font(font_size)
             
             # Text box width should be 90% of total image width

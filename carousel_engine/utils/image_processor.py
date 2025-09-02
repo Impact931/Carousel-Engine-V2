@@ -3,6 +3,8 @@ Image processing utilities for Carousel Engine v2
 """
 
 import logging
+import os
+import tempfile
 from io import BytesIO
 from typing import Tuple, Optional
 from PIL import Image, ImageDraw, ImageFont
@@ -375,7 +377,19 @@ class ImageProcessor:
             PIL ImageFont object that WILL respect the size parameter
         """
         try:
-            # Try to load Lato font first
+            # FIRST: Try bundled font (this will work in production!)
+            bundled_font_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'fonts', 'opensans.ttf')
+            try:
+                if os.path.exists(bundled_font_path):
+                    font = ImageFont.truetype(bundled_font_path, size)
+                    logger.info(f"✅ SUCCESS: Loaded bundled OpenSans font at {size}pt from {bundled_font_path}")
+                    return font
+                else:
+                    logger.warning(f"Bundled font not found at {bundled_font_path}")
+            except Exception as e:
+                logger.warning(f"Failed to load bundled font: {e}")
+            
+            # Try to load Lato font second
             lato_options = [
                 "Lato-Regular.ttf",
                 "lato-regular.ttf",
@@ -425,25 +439,64 @@ class ImageProcessor:
                 except (OSError, IOError):
                     continue
             
-            # CRITICAL FALLBACK: Create a TrueType-like font that respects size
-            # This prevents the load_default() bitmap font issue
-            logger.error(f"🚨 CRITICAL: All TrueType fonts failed! Creating custom font solution for {size}pt")
+            # CRITICAL FALLBACK: Download a web font dynamically for serverless environments
+            logger.error(f"🚨 CRITICAL: All system fonts failed! Attempting to download web font for {size}pt")
             
-            # Try PIL's default TrueType fonts (these respect size better than load_default)
             try:
-                # This will use PIL's internal TrueType font if available
-                return ImageFont.truetype("arial.ttf", size)
-            except:
+                # Try to download a font from Google Fonts or similar
+                font_urls = [
+                    "https://github.com/google/fonts/raw/main/ofl/opensans/OpenSans%5Bwdth%2Cwght%5D.ttf",
+                    "https://github.com/google/fonts/raw/main/apache/roboto/Roboto-Regular.ttf"
+                ]
+                
+                for font_url in font_urls:
+                    try:
+                        logger.info(f"🔄 Attempting to download font from: {font_url}")
+                        response = requests.get(font_url, timeout=10)
+                        
+                        if response.status_code == 200:
+                            # Save to temporary file
+                            with tempfile.NamedTemporaryFile(suffix='.ttf', delete=False) as temp_font:
+                                temp_font.write(response.content)
+                                temp_font_path = temp_font.name
+                            
+                            # Try to load the downloaded font
+                            font = ImageFont.truetype(temp_font_path, size)
+                            logger.info(f"✅ SUCCESS: Downloaded and loaded web font at {size}pt!")
+                            
+                            # Clean up temp file
+                            try:
+                                os.unlink(temp_font_path)
+                            except:
+                                pass
+                            
+                            return font
+                            
+                    except Exception as e:
+                        logger.warning(f"Failed to download font from {font_url}: {e}")
+                        continue
+                
+                # If web font download fails, fall back to scaling hack
+                logger.error(f"💀 ALL FONT SOLUTIONS FAILED! Using emergency text scaling for {size}pt")
+                
+                # Create a font that at least tries to scale
+                default_font = ImageFont.load_default()
+                
+                # Log the actual measurements
+                test_text = "Test"
                 try:
-                    # Last resort: Use PIL's better font loading (ImageFont already imported at top of file)
-                    # This creates a font that will respect size better than load_default
-                    font = ImageFont.load_default()
-                    logger.warning(f"⚠️ Using PIL default font - size may not be exactly {size}pt but will attempt to scale")
-                    return font
+                    bbox = default_font.getbbox(test_text) if hasattr(default_font, 'getbbox') else (0, 0, 50, 20)
+                    actual_height = bbox[3] - bbox[1] if len(bbox) == 4 else 20
+                    logger.error(f"💀 FONT EMERGENCY: Default font renders at {actual_height}px, need {size}pt")
+                    logger.error(f"💀 TEXT WILL BE TINY! This is the root cause of unreadable text!")
                 except:
-                    # Absolute fallback - but log critical error
-                    logger.error(f"💥 FONT SYSTEM FAILURE: Falling back to basic font - {size}pt text will be compromised!")
-                    return ImageFont.load_default()
+                    logger.error(f"💀 FONT MEASUREMENT FAILED - text will be compromised")
+                
+                return default_font
+                
+            except Exception as e:
+                logger.error(f"💥 COMPLETE FONT SYSTEM FAILURE: {e}")
+                return ImageFont.load_default()
             
         except Exception as e:
             logger.error(f"Error in font loading system: {e}")

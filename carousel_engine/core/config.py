@@ -33,6 +33,12 @@ class Config(BaseSettings):
     max_carousel_slides: int = Field(default=7, description="Maximum number of slides per carousel")
     lines_per_slide: int = Field(default=2, description="Maximum lines of text per slide")
     
+    # Font Settings for Maximum Legibility
+    min_title_font_size: int = Field(default=60, description="Minimum font size for titles (pt)")
+    max_title_font_size: int = Field(default=96, description="Maximum font size for titles (pt)")
+    min_content_font_size: int = Field(default=60, description="Minimum font size for content (pt)")
+    max_content_font_size: int = Field(default=84, description="Maximum font size for content (pt)")
+    
     # Cost Monitoring
     max_cost_per_run: float = Field(default=1.00, description="Maximum cost per carousel generation")
     

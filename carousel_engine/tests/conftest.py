@@ -73,7 +73,7 @@ def mock_openai_service():
 def mock_image_processor():
     """Mock image processor"""
     mock = Mock(spec=ImageProcessor)
-    mock.create_carousel_slide = Mock(return_value=b"fake_image_data")
+    mock.create_carousel_slide = Mock(return_value=(b"fake_image_data", None))
     return mock
 
 

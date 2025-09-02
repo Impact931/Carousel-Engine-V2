@@ -28,8 +28,8 @@ class ImageProcessor:
         text: str,
         is_title_slide: bool = False,
         slide_number: Optional[int] = None
-    ) -> bytes:
-        """Create a carousel slide with text overlay
+    ) -> Tuple[bytes, Optional[str]]:
+        """Create a carousel slide with text overlay and overflow detection
         
         Args:
             background_image_data: Background image as bytes
@@ -38,7 +38,7 @@ class ImageProcessor:
             slide_number: Slide number for non-title slides
             
         Returns:
-            Processed image as bytes
+            Tuple of (processed_image_bytes, overflow_text)
             
         Raises:
             ImageProcessingError: If image processing fails
@@ -64,10 +64,11 @@ class ImageProcessor:
             
             # Re-enable text rendering with improved contrast and sizing
             # Text rendered separately over clean aesthetic background
+            overflow_text = None
             if is_title_slide:
-                self._add_title_text(draw, text, self.width, self.height)
+                overflow_text = self._add_title_text(draw, text, self.width, self.height)
             else:
-                self._add_content_text(draw, text, self.width, self.height, slide_number)
+                overflow_text = self._add_content_text(draw, text, self.width, self.height, slide_number)
             
             # Branding removed per user request
             # self._add_branding(draw, self.width, self.height)
@@ -76,15 +77,15 @@ class ImageProcessor:
             output_buffer = BytesIO()
             background.save(output_buffer, format='PNG', optimize=True)
             
-            return output_buffer.getvalue()
+            return output_buffer.getvalue(), overflow_text
             
         except Exception as e:
             error_msg = f"Failed to create carousel slide: {e}"
             logger.error(error_msg)
             raise ImageProcessingError(error_msg)
     
-    def _add_title_text(self, draw: ImageDraw.Draw, title: str, width: int, height: int) -> None:
-        """Add title text to image
+    def _add_title_text(self, draw: ImageDraw.Draw, title: str, width: int, height: int) -> Optional[str]:
+        """Add title text to image with intelligent font sizing
         
         Args:
             draw: PIL ImageDraw object
@@ -93,9 +94,9 @@ class ImageProcessor:
             height: Image height
         """
         try:
-            # Use standard Google font at minimum 40pt
-            font_size = 48  # 48pt minimum font size
-            title_font = self._get_lato_font(font_size)
+            # Start with larger font and scale down if needed
+            optimal_font_size = self._calculate_optimal_title_font_size(title, width, height)
+            title_font = self._get_lato_font(optimal_font_size)
             
             # Calculate text dimensions first
             bbox = draw.textbbox((0, 0), title, font=title_font)
@@ -142,9 +143,11 @@ class ImageProcessor:
             )
             
             logger.debug(f"Added title text at position ({x}, {y})")
+            return None  # Titles typically don't overflow
             
         except Exception as e:
             logger.error(f"Failed to add title text: {e}")
+            return None
     
     def _add_content_text(
         self, 
@@ -153,7 +156,7 @@ class ImageProcessor:
         width: int, 
         height: int,
         slide_number: Optional[int] = None
-    ) -> None:
+    ) -> Optional[str]:
         """Add content text to image with semi-opaque white box
         
         Args:
@@ -164,16 +167,16 @@ class ImageProcessor:
             slide_number: Slide number
         """
         try:
-            # Use standard Google font at minimum 40pt  
-            font_size = 48  # 48pt minimum font size
-            content_font = self._get_lato_font(font_size)
+            # Use intelligent font sizing with 60pt minimum for maximum legibility
+            optimal_font_size = self._calculate_optimal_content_font_size(content, width, height)
+            content_font = self._get_lato_font(optimal_font_size)
             
             # Text box width should be 90% of total image width
             text_box_width = int(width * 0.9)  # 90% of image width
             text_box_left_margin = int(width * 0.05)  # 5% margin on each side
             
-            # Split content into 2-3 lines with optimized wrapping
-            lines = self._wrap_text_optimized(content, content_font, text_box_width, max_lines=3)
+            # Split content with overflow intelligence - prioritize readability over content density
+            lines, overflow_text = self._wrap_text_with_overflow_intelligence(content, content_font, text_box_width, max_lines=3)
             
             # Calculate text dimensions with improved line spacing
             line_spacing_multiplier = 1.4  # Increased line height for better readability
@@ -235,10 +238,16 @@ class ImageProcessor:
             if slide_number is not None:
                 self._add_slide_number(final_draw, slide_number, width, height)
             
-            logger.debug(f"Added content text with {len(lines)} lines")
+            # Log overflow handling for debugging
+            if overflow_text:
+                logger.info(f"Content overflow detected: '{overflow_text}' - should create additional slide")
+            
+            logger.debug(f"Added content text with {len(lines)} lines at {optimal_font_size}pt font size")
+            return overflow_text
             
         except Exception as e:
             logger.error(f"Failed to add content text: {e}")
+            return None
     
     def _add_slide_number(
         self, 
@@ -563,3 +572,165 @@ class ImageProcessor:
         except Exception as e:
             logger.error(f"Error in optimized text wrapping: {e}")
             return [text[:50] + '...' if len(text) > 50 else text]
+    
+    def _calculate_optimal_title_font_size(self, title: str, width: int, height: int) -> int:
+        """Calculate optimal font size for title text with minimum 60pt
+        
+        Args:
+            title: Title text
+            width: Image width
+            height: Image height
+            
+        Returns:
+            Optimal font size (minimum 60pt for maximum impact)
+        """
+        try:
+            # Use config values for font sizing
+            min_font_size = config.min_title_font_size
+            max_font_size = config.max_title_font_size
+            
+            # Available text area (80% width, 40% height for titles)
+            available_width = int(width * 0.8)
+            available_height = int(height * 0.4)
+            
+            # Try font sizes from max to min
+            for font_size in range(max_font_size, min_font_size - 1, -4):
+                test_font = self._get_lato_font(font_size)
+                
+                # Test if title fits in single line with this font size
+                if hasattr(test_font, 'getlength'):
+                    text_width = test_font.getlength(title)
+                    metrics = test_font.getmetrics()
+                    text_height = metrics[0] + metrics[1]  # ascent + descent
+                else:
+                    # Fallback for older PIL
+                    text_width, text_height = test_font.getsize(title)
+                
+                # Check if text fits with padding
+                padding = 40
+                if (text_width + padding * 2) <= available_width and (text_height + padding * 2) <= available_height:
+                    logger.info(f"Optimal title font size: {font_size}pt for '{title[:30]}...'")
+                    return font_size
+            
+            # Use minimum font size if nothing fits
+            logger.warning(f"Using minimum title font size {min_font_size}pt - text may be tight")
+            return min_font_size
+            
+        except Exception as e:
+            logger.error(f"Error calculating title font size: {e}")
+            return 60  # Safe fallback
+    
+    def _calculate_optimal_content_font_size(self, content: str, width: int, height: int) -> int:
+        """Calculate optimal font size for content text with minimum 60pt
+        
+        Args:
+            content: Content text
+            width: Image width  
+            height: Image height
+            
+        Returns:
+            Optimal font size (minimum 60pt for maximum legibility)
+        """
+        try:
+            # Use config values for font sizing
+            min_font_size = config.min_content_font_size
+            max_font_size = config.max_content_font_size
+            
+            # Available text area (90% width, 60% height for content)
+            text_box_width = int(width * 0.9)
+            available_height = int(height * 0.6)
+            
+            # Try font sizes from max to min
+            for font_size in range(max_font_size, min_font_size - 1, -4):
+                test_font = self._get_lato_font(font_size)
+                
+                # Test text wrapping with this font size
+                lines, overflow = self._wrap_text_with_overflow_intelligence(content, test_font, text_box_width, max_lines=3)
+                
+                # Calculate total height needed
+                if hasattr(test_font, 'getmetrics'):
+                    metrics = test_font.getmetrics()
+                    line_height = int((metrics[0] + metrics[1]) * 1.4)  # Line spacing
+                else:
+                    # Fallback
+                    line_height = int(font_size * 1.4)
+                
+                total_text_height = len(lines) * line_height
+                padding = int(width * 0.06)  # 6% padding
+                
+                # Check if text fits without overflow and within height
+                if not overflow and (total_text_height + padding * 2) <= available_height:
+                    logger.info(f"Optimal content font size: {font_size}pt for content length {len(content)}")
+                    return font_size
+            
+            # Use minimum font size if nothing fits
+            logger.warning(f"Using minimum content font size {min_font_size}pt - may need overflow handling")
+            return min_font_size
+            
+        except Exception as e:
+            logger.error(f"Error calculating content font size: {e}")
+            return 60  # Safe fallback
+    
+    def _wrap_text_with_overflow_intelligence(self, text: str, font: ImageFont.ImageFont, box_width: int, max_lines: int = 3) -> tuple[list[str], str]:
+        """Wrap text with overflow intelligence - returns text that fits and overflow text
+        
+        Args:
+            text: Text to wrap
+            font: Font to use for measuring
+            box_width: Total box width (90% of image width)
+            max_lines: Maximum number of lines (default 3)
+            
+        Returns:
+            Tuple of (lines_that_fit, overflow_text)
+        """
+        try:
+            words = text.split()
+            if not words:
+                return [''], ''
+            
+            lines = []
+            current_line = []
+            overflow_words = []
+            
+            # Use 80% of box width for text, leaving 10% buffer on each side
+            usable_width = int(box_width * 0.8)
+            
+            for i, word in enumerate(words):
+                test_line = ' '.join(current_line + [word])
+                
+                # Use textlength for accurate measurement
+                if hasattr(font, 'getlength'):
+                    text_width = font.getlength(test_line)
+                else:
+                    # Fallback for older PIL versions
+                    text_width = font.getsize(test_line)[0]
+                
+                if text_width <= usable_width or not current_line:
+                    current_line.append(word)
+                else:
+                    # Start new line if we haven't reached max lines
+                    if len(lines) < max_lines - 1:
+                        if current_line:
+                            lines.append(' '.join(current_line))
+                        current_line = [word]
+                    else:
+                        # We're at max lines - everything else is overflow
+                        if current_line:
+                            lines.append(' '.join(current_line))
+                        overflow_words = words[i:]
+                        break
+            
+            # Add remaining words as final line if within limit and no overflow
+            if current_line and len(lines) < max_lines and not overflow_words:
+                lines.append(' '.join(current_line))
+            elif current_line and not overflow_words:
+                # If we have remaining words but reached max lines, they become overflow
+                overflow_words = current_line
+            
+            overflow_text = ' '.join(overflow_words) if overflow_words else ''
+            
+            return lines if lines else [text], overflow_text
+            
+        except Exception as e:
+            logger.error(f"Error in overflow-intelligent text wrapping: {e}")
+            return [text[:50] + '...' if len(text) > 50 else text], ''

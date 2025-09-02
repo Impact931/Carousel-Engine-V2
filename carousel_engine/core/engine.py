@@ -308,12 +308,16 @@ class CarouselEngine:
                 # This is now a professional DALL-E 3 generated real estate image
                 
                 # Create slide image with professional background and proper text overlay
-                image_data = self.image_processor.create_carousel_slide(
+                image_data, overflow_text = self.image_processor.create_carousel_slide(
                     background_image_data,
                     slide.content,
                     is_title_slide=slide.is_title_slide,
                     slide_number=slide.slide_number
                 )
+                
+                # Handle overflow by logging (could be extended to create additional slides)
+                if overflow_text:
+                    logger.warning(f"Content overflow on slide {slide.slide_number}: '{overflow_text}' - consider splitting content")
                 
                 slide_images.append((image_data, filename))
                 logger.debug(f"Created image for slide {slide.slide_number}")

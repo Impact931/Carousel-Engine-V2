@@ -419,7 +419,7 @@ class OpenAIService:
         return dalle_prompt
     
     def _detect_business_type(self, client_context: str, title: str) -> str:
-        """Detect business type from client context and content
+        """Enhanced business type detection with comprehensive keyword matching
         
         Args:
             client_context: Client system message context
@@ -430,44 +430,81 @@ class OpenAIService:
         """
         context_lower = (client_context + " " + title).lower()
         
-        # Real Estate
-        if any(word in context_lower for word in ['real estate', 'realtor', 'property', 'home', 'buyer', 'seller', 'listing']):
+        # ENHANCED Real Estate Detection - Tennessee residential focus
+        real_estate_keywords = [
+            # Direct real estate terms
+            'real estate', 'realtor', 'property', 'home', 'buyer', 'seller', 'listing',
+            'house', 'residential', 'agent', 'broker', 'mortgage', 'closing',
+            
+            # Geographic indicators
+            'tennessee', 'tn', 'nashville', 'memphis', 'knoxville', 'chattanooga',
+            'franklin', 'murfreesboro', 'clarksville', 'jackson', 'johnson city',
+            'south', 'southern', 'southeast',
+            
+            # Real estate specific terms
+            'mls', 'appraisal', 'inspection', 'contract', 'deed', 'title',
+            'neighborhood', 'community', 'subdivision', 'market analysis',
+            'first time buyer', 'investment property', 'rental', 'lease',
+            'square feet', 'sqft', 'bedroom', 'bathroom', 'lot size',
+            'new construction', 'foreclosure', 'short sale', 'refinance',
+            
+            # Emotional/lifestyle terms common in real estate
+            'dream home', 'family home', 'starter home', 'forever home',
+            'move', 'relocate', 'relocation', 'downsize', 'upgrade',
+            'school district', 'walkable', 'commute', 'neighborhood',
+            'local market', 'housing market'
+        ]
+        
+        # Count matches for better detection
+        real_estate_matches = [keyword for keyword in real_estate_keywords if keyword in context_lower]
+        
+        if real_estate_matches:
+            logger.info(f"🏠 REAL ESTATE DETECTED - Matched keywords: {real_estate_matches}")
             return 'real_estate'
         
         # Fitness/Health
         elif any(word in context_lower for word in ['fitness', 'gym', 'workout', 'health', 'nutrition', 'personal trainer', 'wellness']):
+            logger.info(f"💪 FITNESS business detected")
             return 'fitness'
         
         # Restaurant/Food
         elif any(word in context_lower for word in ['restaurant', 'food', 'chef', 'dining', 'cuisine', 'menu', 'culinary']):
+            logger.info(f"🍽️ RESTAURANT business detected")
             return 'restaurant'
         
         # Coaching/Consulting
         elif any(word in context_lower for word in ['coach', 'coaching', 'consultant', 'mentor', 'business coach', 'life coach']):
+            logger.info(f"🎯 COACHING business detected")
             return 'coaching'
         
         # E-commerce/Retail
         elif any(word in context_lower for word in ['e-commerce', 'retail', 'store', 'shop', 'product', 'selling', 'brand']):
+            logger.info(f"🛍️ RETAIL business detected")
             return 'retail'
         
         # Professional Services
         elif any(word in context_lower for word in ['lawyer', 'attorney', 'accountant', 'financial', 'consulting', 'professional']):
+            logger.info(f"⚖️ PROFESSIONAL SERVICES detected")
             return 'professional_services'
         
         # Corporate/Business
         elif any(word in context_lower for word in ['corporate', 'business', 'enterprise', 'company', 'office', 'executive', 'management']):
+            logger.info(f"🏢 CORPORATE business detected")
             return 'corporate'
         
         # Technology/SaaS
         elif any(word in context_lower for word in ['tech', 'software', 'app', 'saas', 'platform', 'digital', 'startup']):
+            logger.info(f"💻 TECHNOLOGY business detected")
             return 'technology'
         
         # Beauty/Spa
         elif any(word in context_lower for word in ['beauty', 'spa', 'salon', 'skincare', 'massage', 'aesthetics']):
+            logger.info(f"💄 BEAUTY business detected")
             return 'beauty'
         
-        # Default to professional services
+        # Default to professional services but log warning
         else:
+            logger.warning(f"❓ NO BUSINESS TYPE MATCHED - Defaulting to professional_services. Context preview: '{context_lower[:100]}...'")
             return 'professional_services'
     
     def _generate_content_focus(self, title: str, business_type: str) -> str:
@@ -495,10 +532,10 @@ class OpenAIService:
         # Business-specific visual mapping
         focus_map = {
             'real_estate': {
-                'calming_confidence': 'peaceful, confidence-inspiring residential interior with soft lighting',
-                'success_oriented': 'stunning modern home exterior showcasing achievement',
-                'luxury_focused': 'luxury residential architecture with premium finishes',
-                'professional_standard': 'beautiful residential space with professional staging'
+                'calming_confidence': 'warm, inviting Tennessee home interior with cozy fireplace and natural light',
+                'success_oriented': 'beautiful Southern home exterior with front porch and mature landscaping',
+                'luxury_focused': 'upscale Tennessee residential architecture with luxury Southern charm',
+                'professional_standard': 'professionally staged Tennessee home with warm, welcoming atmosphere'
             },
             'fitness': {
                 'calming_confidence': 'serene, well-equipped fitness studio with natural lighting',
@@ -572,7 +609,7 @@ class OpenAIService:
         
         # Industry-specific additions
         industry_additions = {
-            'real_estate': "architectural details, interior staging, spatial flow, home atmosphere",
+            'real_estate': "Southern architectural details, Tennessee home staging, cozy family atmosphere, residential warmth and charm",
             'fitness': "exercise equipment, motivational elements, health-focused atmosphere, active energy",
             'restaurant': "culinary elements, dining atmosphere, food presentation spaces, hospitality warmth",
             'coaching': "consultation areas, growth-oriented atmosphere, trust-building elements, professional rapport",

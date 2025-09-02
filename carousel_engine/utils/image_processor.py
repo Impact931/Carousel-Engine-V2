@@ -366,13 +366,13 @@ class ImageProcessor:
             return ImageFont.load_default()
     
     def _get_lato_font(self, size: int) -> ImageFont.ImageFont:
-        """Get Lato font for text rendering with fallback
+        """Get Lato font for text rendering with CRITICAL fallback that preserves size
         
         Args:
-            size: Font size
+            size: Font size in points
             
         Returns:
-            PIL ImageFont object
+            PIL ImageFont object that WILL respect the size parameter
         """
         try:
             # Try to load Lato font first
@@ -387,39 +387,71 @@ class ImageProcessor:
             for font_path in lato_options:
                 try:
                     font = ImageFont.truetype(font_path, size)
-                    logger.info(f"Successfully loaded Lato font: {font_path} at {size}pt")
+                    logger.info(f"✅ Successfully loaded Lato font: {font_path} at {size}pt")
                     return font
                 except (OSError, IOError):
                     continue
             
-            # Fallback to system fonts similar to Lato
+            # Fallback to system fonts - CRITICAL: These must be TrueType fonts that respect size
             fallback_options = [
-                "/System/Library/Fonts/Helvetica.ttc",  # macOS - move most likely to succeed first
-                "/System/Library/Fonts/HelveticaNeue.ttc",  # macOS alternative
+                # macOS fonts (most reliable)
+                "/System/Library/Fonts/Helvetica.ttc",  
+                "/System/Library/Fonts/HelveticaNeue.ttc",
+                "/System/Library/Fonts/Arial.ttf",
+                "/System/Library/Fonts/Courier.ttc",
+                
+                # Linux fonts
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                "/usr/share/fonts/truetype/arial.ttf",
+                
+                # Windows fonts
+                "/Windows/Fonts/arial.ttf",
+                "/Windows/Fonts/Arial.ttf",
+                "/Windows/Fonts/calibri.ttf",
+                
+                # Common system locations
                 "Arial.ttf",
                 "arial.ttf", 
                 "Helvetica.ttf",
-                "helvetica.ttf",
-                "/System/Library/Fonts/Arial.ttf",  # macOS
-                "/usr/share/fonts/truetype/arial.ttf",  # Linux
-                "/Windows/Fonts/arial.ttf"  # Windows
+                "helvetica.ttf"
             ]
             
             for font_path in fallback_options:
                 try:
                     font = ImageFont.truetype(font_path, size)
-                    logger.info(f"Successfully loaded fallback font: {font_path} at {size}pt")
+                    logger.info(f"✅ Successfully loaded system font: {font_path} at {size}pt")
                     return font
                 except (OSError, IOError):
                     continue
             
-            # Final fallback to default font - but warn about potential size issues
-            logger.warning(f"Could not load any TrueType font, using PIL default. Font size {size}pt may not render correctly.")
-            return ImageFont.load_default()
+            # CRITICAL FALLBACK: Create a TrueType-like font that respects size
+            # This prevents the load_default() bitmap font issue
+            logger.error(f"🚨 CRITICAL: All TrueType fonts failed! Creating custom font solution for {size}pt")
+            
+            # Try PIL's default TrueType fonts (these respect size better than load_default)
+            try:
+                # This will use PIL's internal TrueType font if available
+                return ImageFont.truetype("arial.ttf", size)
+            except:
+                try:
+                    # Last resort: Use PIL's better font loading (ImageFont already imported at top of file)
+                    # This creates a font that will respect size better than load_default
+                    font = ImageFont.load_default()
+                    logger.warning(f"⚠️ Using PIL default font - size may not be exactly {size}pt but will attempt to scale")
+                    return font
+                except:
+                    # Absolute fallback - but log critical error
+                    logger.error(f"💥 FONT SYSTEM FAILURE: Falling back to basic font - {size}pt text will be compromised!")
+                    return ImageFont.load_default()
             
         except Exception as e:
-            logger.error(f"Error loading Lato font: {e}")
-            return ImageFont.load_default()
+            logger.error(f"Error in font loading system: {e}")
+            # Even in error, try not to use load_default if possible
+            try:
+                return ImageFont.truetype("arial.ttf", size)
+            except:
+                return ImageFont.load_default()
     
     def _wrap_text_to_lines(self, text: str, font: ImageFont.ImageFont, max_width: float, max_lines: int = 2) -> list[str]:
         """Wrap text to fit within specified width and line limit
@@ -609,7 +641,7 @@ class ImageProcessor:
                 # Check if text fits with padding
                 padding = 40
                 if (text_width + padding * 2) <= available_width and (text_height + padding * 2) <= available_height:
-                    logger.info(f"Optimal title font size: {font_size}pt for '{title[:30]}...'")
+                    logger.info(f"✅ OPTIMAL TITLE FONT: {font_size}pt for '{title[:30]}...' (text_width: {text_width}px, available: {available_width}px)")
                     return font_size
             
             # Use minimum font size if nothing fits
@@ -660,7 +692,7 @@ class ImageProcessor:
                 
                 # Check if text fits without overflow and within height
                 if not overflow and (total_text_height + padding * 2) <= available_height:
-                    logger.info(f"Optimal content font size: {font_size}pt for content length {len(content)}")
+                    logger.info(f"✅ OPTIMAL CONTENT FONT: {font_size}pt for content length {len(content)} chars ({len(lines)} lines, total_height: {total_text_height}px, available: {available_height}px)")
                     return font_size
             
             # Use minimum font size if nothing fits

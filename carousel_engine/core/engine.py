@@ -311,7 +311,7 @@ class CarouselEngine:
                 image_data = self.image_processor.create_carousel_slide(
                     background_image_data,
                     slide.content,
-                    is_title_slide=False,
+                    is_title_slide=slide.is_title_slide,
                     slide_number=slide.slide_number
                 )
                 

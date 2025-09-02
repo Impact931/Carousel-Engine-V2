@@ -93,31 +93,51 @@ class ImageProcessor:
             height: Image height
         """
         try:
-            # Use LARGE fixed font for title - much bigger for better readability
-            font_size = 80  # Fixed 80pt font size for title - much larger for visibility
+            # Use standard Google font at minimum 40pt
+            font_size = 48  # 48pt minimum font size
             title_font = self._get_lato_font(font_size)
             
-            # Text styling for title
-            text_color = (255, 255, 255)  # White
-            stroke_color = (0, 0, 0)  # Black stroke
-            stroke_width = 2
-            
-            # Calculate text position (centered)
+            # Calculate text dimensions first
             bbox = draw.textbbox((0, 0), title, font=title_font)
             text_width = bbox[2] - bbox[0]
             text_height = bbox[3] - bbox[1]
             
+            # Center text position
             x = (width - text_width) // 2
             y = (height - text_height) // 2
             
-            # Draw text with stroke
-            draw.text(
+            # Create semi-opaque background box
+            padding = 40
+            box_left = x - padding
+            box_top = y - padding  
+            box_right = x + text_width + padding
+            box_bottom = y + text_height + padding
+            
+            # Draw semi-opaque background
+            background_image = draw._image
+            background_rgba = background_image.convert('RGBA')
+            box_overlay = Image.new('RGBA', background_rgba.size, (0, 0, 0, 0))
+            box_draw = ImageDraw.Draw(box_overlay)
+            box_draw.rounded_rectangle(
+                [box_left, box_top, box_right, box_bottom],
+                radius=20,
+                fill=(255, 255, 255, 153)  # White with 60% opacity
+            )
+            
+            # Composite the box overlay onto the main image
+            background_rgba = Image.alpha_composite(background_rgba, box_overlay)
+            final_image = background_rgba.convert('RGB')
+            draw._image.paste(final_image)
+            
+            # Create new draw context and draw text
+            final_draw = ImageDraw.Draw(draw._image)
+            text_color = (64, 64, 64)  # Dark gray
+            
+            final_draw.text(
                 (x, y), 
                 title, 
                 font=title_font, 
                 fill=text_color,
-                stroke_fill=stroke_color,
-                stroke_width=stroke_width,
                 anchor="lt"
             )
             
@@ -144,8 +164,8 @@ class ImageProcessor:
             slide_number: Slide number
         """
         try:
-            # Use LARGE font for content - minimum 60pt for better readability
-            font_size = 64  # Fixed 64pt font size for maximum carousel readability - much larger!
+            # Use standard Google font at minimum 40pt  
+            font_size = 48  # 48pt minimum font size
             content_font = self._get_lato_font(font_size)
             
             # Text box width should be 90% of total image width

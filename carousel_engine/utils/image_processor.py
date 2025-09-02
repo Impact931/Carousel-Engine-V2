@@ -49,8 +49,8 @@ class ImageProcessor:
             # Load background image
             background = Image.open(BytesIO(background_image_data))
             
-            # Resize to target dimensions
-            background = background.resize((self.width, self.height), Image.Resampling.LANCZOS)
+            # No resize needed - DALL-E now generates correct 1:1 aspect ratio
+            # Removed forced resize to prevent distortion
             
             # Ensure RGB mode
             if background.mode != 'RGB':
@@ -59,7 +59,8 @@ class ImageProcessor:
             # Create drawing context
             draw = ImageDraw.Draw(background)
             
-            # Add text overlay
+            # Re-enable text rendering with improved contrast and sizing
+            # Text rendered separately over clean aesthetic background
             if is_title_slide:
                 self._add_title_text(draw, text, self.width, self.height)
             else:

@@ -454,6 +454,10 @@ class OpenAIService:
         elif any(word in context_lower for word in ['lawyer', 'attorney', 'accountant', 'financial', 'consulting', 'professional']):
             return 'professional_services'
         
+        # Corporate/Business
+        elif any(word in context_lower for word in ['corporate', 'business', 'enterprise', 'company', 'office', 'executive', 'management']):
+            return 'corporate'
+        
         # Technology/SaaS
         elif any(word in context_lower for word in ['tech', 'software', 'app', 'saas', 'platform', 'digital', 'startup']):
             return 'technology'
@@ -537,6 +541,12 @@ class OpenAIService:
                 'success_oriented': 'modern beauty salon with professional equipment',
                 'luxury_focused': 'luxury spa or high-end beauty salon with premium atmosphere',
                 'professional_standard': 'clean, professional beauty or wellness space'
+            },
+            'corporate': {
+                'calming_confidence': 'professional corporate office with calming, organized atmosphere',
+                'success_oriented': 'modern corporate headquarters showcasing business success',
+                'luxury_focused': 'premium executive boardroom with high-end corporate design',
+                'professional_standard': 'clean corporate office environment with business atmosphere'
             }
         }
         
@@ -569,7 +579,8 @@ class OpenAIService:
             'retail': "product displays, customer-friendly layout, brand presentation, shopping experience",
             'professional_services': "credibility elements, trust-building atmosphere, expertise showcase, client comfort",
             'technology': "innovation elements, modern tech aesthetic, cutting-edge atmosphere, digital sophistication",
-            'beauty': "wellness atmosphere, relaxation elements, self-care environment, transformation space"
+            'beauty': "wellness atmosphere, relaxation elements, self-care environment, transformation space",
+            'corporate': "business authority, executive presence, corporate professionalism, enterprise atmosphere"
         }
         
         base = base_elements.get(theme, base_elements["professional"])

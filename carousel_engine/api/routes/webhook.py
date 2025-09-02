@@ -256,7 +256,7 @@ async def _should_process_page(engine, page_id: str) -> bool:
         # If page has Status property, be flexible about status values
         if hasattr(page, 'status') and page.status:
             # Accept various "ready" status values
-            ready_statuses = ['ready', 'pending', 'new', 'todo', 'queued', 'active', 'review']
+            ready_statuses = ['ready', 'pending', 'new', 'todo', 'queued', 'active', 'review', 'brainstorming']
             if str(page.status).lower() not in ready_statuses:
                 logger.info("Page status indicates not ready for processing", 
                           page_id=page_id, status=page.status)

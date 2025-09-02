@@ -89,6 +89,78 @@ class OpenAIService:
             logger.error(error_msg)
             raise OpenAIError(error_msg, prompt=prompt)
     
+    async def generate_background_image(
+        self, 
+        title: str, 
+        theme: str = "professional",
+        client_context: str = "",
+        size: str = "1024x1024"
+    ) -> tuple[bytes, float]:
+        """Generate actual background image using DALL-E 3
+        
+        Args:
+            title: Content title for image context
+            theme: Visual theme (luxury, modern, warm, professional, vibrant)
+            client_context: Client-specific context from system message
+            size: Image size (1024x1024, 1792x1024, or 1024x1792)
+            
+        Returns:
+            Tuple of (image_data_bytes, estimated_cost)
+            
+        Raises:
+            OpenAIError: If image generation fails
+        """
+        try:
+            logger.info(f"Generating DALL-E 3 background image for title: {title}")
+            
+            # Create optimized prompt for real estate imagery
+            prompt = self._create_dalle_background_prompt(title, theme, client_context)
+            
+            # Check cost limit
+            estimated_cost = self._estimate_dalle_cost(size)
+            if self.total_cost + estimated_cost > config.max_cost_per_run:
+                raise OpenAIError(
+                    f"Cost limit would be exceeded. Current: ${self.total_cost:.2f}, "
+                    f"Estimated: ${estimated_cost:.2f}, Limit: ${config.max_cost_per_run:.2f}",
+                    prompt=prompt
+                )
+            
+            # Generate image with DALL-E 3
+            response = self.client.images.generate(
+                model="dall-e-3",
+                prompt=prompt,
+                size=size,
+                quality="standard",
+                n=1
+            )
+            
+            # Get image URL and download
+            image_url = response.data[0].url
+            import requests
+            image_response = requests.get(image_url, timeout=30)
+            image_response.raise_for_status()
+            
+            image_data = image_response.content
+            
+            # Update cost tracking
+            self.total_cost += estimated_cost
+            
+            logger.info(f"Successfully generated background image. Cost: ${estimated_cost:.2f}")
+            return image_data, estimated_cost
+            
+        except openai.OpenAIError as e:
+            error_msg = f"OpenAI API error generating background image: {e}"
+            logger.error(error_msg)
+            raise OpenAIError(error_msg, prompt=prompt)
+        except requests.RequestException as e:
+            error_msg = f"Failed to download generated image: {e}"
+            logger.error(error_msg)
+            raise OpenAIError(error_msg, prompt=prompt)
+        except Exception as e:
+            error_msg = f"Unexpected error generating background image: {e}"
+            logger.error(error_msg)
+            raise OpenAIError(error_msg, prompt=prompt)
+    
     async def optimize_content_for_slides(
         self, 
         content: str, 
@@ -289,6 +361,68 @@ class OpenAIService:
             f"Describe the color palette, lighting conditions, furniture arrangement, and any unique design elements that make this background "
             f"specifically tailored to the content theme. Keep the description detailed but concise (under 200 words)."
         )
+    
+    def _create_dalle_background_prompt(self, title: str, theme: str, client_context: str) -> str:
+        """Create optimized DALL-E prompt for real estate background generation
+        
+        Args:
+            title: Content title for context
+            theme: Visual theme (luxury, modern, warm, professional, vibrant)
+            client_context: Client-specific context from system message
+            
+        Returns:
+            Optimized DALL-E prompt for real estate imagery
+        """
+        # Extract key themes from title for content-specific imagery
+        title_lower = title.lower()
+        
+        # Determine primary focus
+        if any(word in title_lower for word in ['overwhelmed', 'confident', 'fear', 'peace', 'mind']):
+            focus = "peaceful, confidence-inspiring residential interior"
+        elif any(word in title_lower for word in ['first', 'home', 'buying', 'buyer']):
+            focus = "welcoming, dream home exterior"
+        elif any(word in title_lower for word in ['investment', 'market', 'value']):
+            focus = "sophisticated property investment scene"
+        elif any(word in title_lower for word in ['luxury', 'premium', 'high-end']):
+            focus = "luxury residential architecture"
+        else:
+            focus = "beautiful residential home scene"
+        
+        # Theme-specific styling
+        theme_styles = {
+            "luxury": "marble finishes, gold accents, high-end fixtures, sophisticated lighting",
+            "modern": "clean lines, contemporary design, minimalist aesthetic, natural light",
+            "warm": "cozy textures, warm lighting, inviting atmosphere, comfortable furnishings",
+            "professional": "clean architecture, neutral tones, business-appropriate elegance",
+            "vibrant": "bright natural light, colorful accents, energetic atmosphere"
+        }
+        
+        style_elements = theme_styles.get(theme, theme_styles["professional"])
+        
+        # Build comprehensive DALL-E prompt
+        dalle_prompt = (
+            f"Professional real estate photography of a {focus}, showcasing {style_elements}. "
+            f"The scene should convey the emotional theme of '{title}' - creating feelings of trust, "
+            f"confidence, and aspiration for potential homebuyers. "
+            f"Composition: Wide angle view with excellent natural lighting, perfect for text overlay. "
+            f"Style: High-quality architectural photography, Instagram-worthy, magazine quality. "
+            f"Avoid: People, text, logos, cluttered details, dark areas that would interfere with readability. "
+            f"Focus on: Beautiful interior design OR stunning exterior architecture, professional staging, "
+            f"premium finishes, and spatial flow that tells a story of comfort and quality living. "
+            f"Lighting: Soft, natural light with warm tones that create an inviting atmosphere."
+        )
+        
+        # Add client context if available
+        if client_context and len(client_context) > 50:
+            context_lower = client_context.lower()
+            if "millennial" in context_lower:
+                dalle_prompt += " Appeal to millennial homebuyer preferences with modern, clean design."
+            if "luxury" in context_lower:
+                dalle_prompt += " Emphasize luxury finishes and premium materials."
+            if "first-time" in context_lower:
+                dalle_prompt += " Show approachable, welcoming spaces that reduce anxiety."
+        
+        return dalle_prompt
     
     def _create_content_optimization_prompt(
         self, 

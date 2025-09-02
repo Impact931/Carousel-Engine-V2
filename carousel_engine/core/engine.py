@@ -142,17 +142,18 @@ class CarouselEngine:
             optimized_slides = await self._process_content(notion_page, client_system_message)
             content_time = time.time() - content_start
             
-            # Step 3: Generate background description
+            # Step 3: Generate actual background image using DALL-E 3
             image_gen_start = time.time()
-            background_description, image_cost = await self.openai.generate_background_description(
+            background_image_data, image_cost = await self.openai.generate_background_image(
                 notion_page.title,
-                f"professional {notion_page.format.value} carousel background",
-                "professional"  # theme parameter
+                "professional",  # theme
+                client_system_message or "",  # client context for theming
+                "1024x1024"  # size
             )
             image_gen_time = time.time() - image_gen_start
             
-            # Step 4: Create carousel slides with description
-            slide_images = await self._create_slide_images(optimized_slides, background_description)
+            # Step 4: Create carousel slides with real background image
+            slide_images = await self._create_slide_images(optimized_slides, background_image_data)
             
             # Step 5: Upload to Google Drive
             upload_start = time.time()
@@ -285,13 +286,13 @@ class CarouselEngine:
     async def _create_slide_images(
         self, 
         slides: List[CarouselSlide], 
-        background_description: str
+        background_image_data: bytes
     ) -> List[Tuple[bytes, str]]:
-        """Create image data for all slides
+        """Create image data for all slides using real background image
         
         Args:
             slides: List of CarouselSlide objects
-            background_description: Background image description from GPT
+            background_image_data: Real background image data from DALL-E 3
             
         Returns:
             List of (image_data, filename) tuples
@@ -303,14 +304,12 @@ class CarouselEngine:
                 # Generate filename (content slides only)
                 filename = f"{slide.slide_number:02d}_slide.png"
                 
-                # Create a simple background image based on the description
-                # For now, create a professional neutral background
-                # TODO: Future enhancement could parse description to create themed background
-                simple_background = self._create_simple_background(background_description)
+                # Use the real generated background image directly
+                # This is now a professional DALL-E 3 generated real estate image
                 
-                # Create slide image (all content slides)
+                # Create slide image with professional background and proper text overlay
                 image_data = self.image_processor.create_carousel_slide(
-                    simple_background,
+                    background_image_data,
                     slide.content,
                     is_title_slide=False,
                     slide_number=slide.slide_number

@@ -62,6 +62,7 @@ def mock_openai_service():
     """Mock OpenAI service"""
     mock = Mock(spec=OpenAIService)
     mock.generate_background_description = AsyncMock()
+    mock.generate_background_image = AsyncMock()
     mock.optimize_content_for_slides = AsyncMock()
     mock.get_total_cost = Mock(return_value=0.0)
     mock.reset_cost_tracking = Mock()

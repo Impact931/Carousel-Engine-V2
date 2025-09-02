@@ -212,6 +212,9 @@ async def _process_page_update(page_id: str, payload: Dict[str, Any]) -> None:
 async def _should_process_page(engine, page_id: str) -> bool:
     """Determine if a page should trigger carousel generation
     
+    Simplified approach: Any webhook button push triggers carousel generation,
+    only requirement is that the page has some content to work with.
+    
     Args:
         engine: Carousel engine instance
         page_id: Notion page ID
@@ -223,50 +226,28 @@ async def _should_process_page(engine, page_id: str) -> bool:
         # Fetch current page state
         page = await engine.notion.get_page(page_id)
         
-        logger.info("Evaluating page for processing", 
+        logger.info("Evaluating page for processing (button trigger approach)", 
                    page_id=page_id,
                    page_title=getattr(page, 'title', 'No title'),
-                   has_format=hasattr(page, 'format'),
-                   format_value=getattr(page, 'format', None),
-                   has_status=hasattr(page, 'status'),
-                   status_value=getattr(page, 'status', None),
                    has_content=bool(getattr(page, 'content', None)),
                    content_length=len(getattr(page, 'content', '') or ''))
         
-        # Check if page has any meaningful content (title, content, or rich text properties)
+        # Simple check: just ensure page has some content to work with
         content_sources = []
         if hasattr(page, 'content') and page.content and page.content.strip():
             content_sources.append(f"content({len(page.content)} chars)")
         if hasattr(page, 'title') and page.title and page.title.strip():
             content_sources.append(f"title({len(page.title)} chars)")
         
-        # For Notion automation webhooks, we should be more permissive
-        # since the page was explicitly triggered by user action
+        # Only reject if there's absolutely no content to work with
         if not content_sources:
-            logger.info("Page has no processable content", page_id=page_id)
+            logger.info("Page has no processable content - skipping carousel generation", page_id=page_id)
             return False
         
-        # If page has Format property, check if it's carousel-related
-        if hasattr(page, 'format') and page.format:
-            if str(page.format).lower() not in ['carousel', 'post', 'content']:
-                logger.info("Page format not suitable for carousel generation", 
-                          page_id=page_id, format=page.format)
-                return False
-        
-        # If page has Status property, be flexible about status values
-        if hasattr(page, 'status') and page.status:
-            # Accept various "ready" status values
-            ready_statuses = ['ready', 'pending', 'new', 'todo', 'queued', 'active', 'review', 'brainstorming']
-            if str(page.status).lower() not in ready_statuses:
-                logger.info("Page status indicates not ready for processing", 
-                          page_id=page_id, status=page.status)
-                return False
-        
-        logger.info("Page meets processing criteria", 
+        # If we get here, the page has content and webhook was triggered - generate carousel!
+        logger.info("Page has content and webhook triggered - proceeding with carousel generation", 
                    page_id=page_id,
-                   content_sources=content_sources,
-                   format=getattr(page, 'format', 'not set'),
-                   status=getattr(page, 'status', 'not set'))
+                   content_sources=content_sources)
         return True
         
     except Exception as e:

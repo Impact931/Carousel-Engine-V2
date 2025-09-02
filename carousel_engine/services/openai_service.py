@@ -631,7 +631,7 @@ class OpenAIService:
         max_slides: int, 
         lines_per_slide: int
     ) -> str:
-        """Create prompt for content optimization with strict character limits for 80pt font
+        """Create prompt balancing creativity with font rendering constraints
         
         Args:
             content: Raw content
@@ -639,50 +639,64 @@ class OpenAIService:
             lines_per_slide: Lines per slide
             
         Returns:
-            Content optimization prompt with technical constraints
+            Content optimization prompt with creative storytelling + technical limits
         """
         return (
-            f"You are creating Instagram carousel slides with STRICT technical constraints for 80pt font rendering.\n\n"
+            f"You are a master Instagram carousel storyteller who creates compelling narratives within technical constraints for 80pt font rendering.\n\n"
             
-            f"CRITICAL TECHNICAL LIMITS (MUST NOT EXCEED):\n"
+            f"CREATIVE STORYTELLING MISSION:\n"
+            f"Create an irresistible story arc that flows seamlessly across slides, where each slide builds emotional momentum "
+            f"and leaves readers desperate to swipe to the next one. Your goal is maximum engagement through masterful storytelling.\n\n"
+            
+            f"STORY ARC STRUCTURE (4-{max_slides} slides):\n"
+            f"SLIDE 1: EMOTIONAL HOOK - Create instant intrigue that demands the next slide\n"
+            f"  • Open emotional loops: 'What if I told you...', 'Most people don't realize...', 'Here's the shocking truth...'\n"
+            f"  • Use curiosity gaps that feel incomplete without slide 2\n\n"
+            
+            f"SLIDE 2: BUILD TENSION - Escalate stakes from slide 1's hook\n"
+            f"  • Transition with: 'But here's what happens...', 'The problem is...', 'That's when I realized...'\n"
+            f"  • Create anticipation for the breakthrough coming next\n\n"
+            
+            f"SLIDE 3: THE REVELATION - Deliver the key insight that resolves slide 2's tension\n"
+            f"  • Connect with: 'Here's what changed everything...', 'The breakthrough came when...', 'So we discovered...'\n"
+            f"  • Provide satisfying 'aha moment' while teasing more to come\n\n"
+            
+            f"SLIDE 4+: PROOF & ACTION - Show transformation and guide next steps\n"
+            f"  • Evidence: 'The result was...', 'Now when we...', 'What happened next...'\n"
+            f"  • End with compelling call-to-action that feels natural\n\n"
+            
+            f"SEAMLESS FLOW TECHNIQUES:\n"
+            f"- Use bridging phrases: 'But that's not all...', 'Here's where it gets interesting...'\n"
+            f"- Create sentence fragments that complete across slides\n"
+            f"- Reference previous slides to maintain story cohesion\n"
+            f"- End each slide with forward momentum: 'But wait...', 'However...', 'The real magic happens when...'\n\n"
+            
+            f"EMOTIONAL ENGAGEMENT:\n"
+            f"- Build progressive emotional investment in the outcome\n"
+            f"- Use 'you' language to create intimate connection\n"
+            f"- Create stakes that matter to the reader\n"
+            f"- Make the final CTA feel like the natural conclusion to their journey\n\n"
+            
+            f"TECHNICAL CONSTRAINTS (maintain creativity within these limits):\n"
             f"- Each slide: MAXIMUM 120 characters total (including spaces)\n"
-            f"- Each line: MAXIMUM 20-25 characters (for 80pt font width)\n"
-            f"- Lines per slide: EXACTLY {lines_per_slide} lines (no more, no less)\n"
-            f"- Total slides: 4-{max_slides} slides maximum\n\n"
+            f"- Each line: 20-25 characters max (for 80pt font legibility)\n"
+            f"- Lines per slide: EXACTLY {lines_per_slide} lines\n"
+            f"- Use powerful, concise language that advances the story\n\n"
             
-            f"CHARACTER COUNTING EXAMPLES:\n"
-            f"✅ GOOD (22 chars): 'Home prices rising'\n"
-            f"✅ GOOD (24 chars): 'Market shifts quickly'\n"
-            f"❌ BAD (35 chars): 'Real estate market conditions are changing'\n"
-            f"❌ BAD (45 chars): 'Understanding current market trends and pricing'\n\n"
+            f"CREATIVE COMPRESSION TECHNIQUES:\n"
+            f"- Choose emotionally charged short words over long descriptive ones\n"
+            f"- Use contractions and drop unnecessary articles\n"
+            f"- Every word must either build emotion, advance plot, or create curiosity\n"
+            f"- Make brevity work FOR the story, not against it\n\n"
             
-            f"NARRATIVE FLOW (within technical limits):\n"
-            f"- Create story progression across slides\n"
-            f"- Use connecting words: 'But', 'Now', 'So', 'Yet'\n"
-            f"- Build curiosity with short, punchy statements\n"
-            f"- End with clear call-to-action\n\n"
+            f"FORMATTING:\n"
+            f"- Start immediately with 'SLIDE 1:'\n"
+            f"- Each slide contains ONLY the text that will appear\n"
+            f"- No explanations or meta-commentary\n"
+            f"- Focus entirely on the connected narrative experience\n\n"
             
-            f"SLIDE STRUCTURE:\n"
-            f"SLIDE 1: Hook (problem/question) - MAX 120 chars\n"
-            f"SLIDE 2: Context/tension - MAX 120 chars\n"
-            f"SLIDE 3: Insight/solution - MAX 120 chars\n"
-            f"SLIDE 4+: Proof/action - MAX 120 chars each\n\n"
-            
-            f"WRITING CONSTRAINTS:\n"
-            f"- Use SHORT words (avoid 'understanding', use 'knowing')\n"
-            f"- Drop articles when possible ('Market rises' not 'The market rises')\n"
-            f"- Use contractions ('Don't' not 'Do not')\n"
-            f"- Eliminate filler words completely\n"
-            f"- Every character must add value\n\n"
-            
-            f"FORMATTING RULES:\n"
-            f"- Start with 'SLIDE 1:' immediately\n"
-            f"- Each line on new line within slide\n"
-            f"- No explanations or meta-text\n"
-            f"- Count characters obsessively\n\n"
-            
-            f"Before writing each slide, mentally count characters. If any slide exceeds 120 characters, "
-            f"rewrite with shorter words and phrases.\n\n"
+            f"Create a carousel where readers feel compelled to swipe through every slide because "
+            f"the story feels incomplete without all pieces. Make them emotionally invested in reaching the resolution.\n\n"
             
             f"Content to transform:\n{content}"
         )

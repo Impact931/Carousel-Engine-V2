@@ -363,7 +363,7 @@ class OpenAIService:
         )
     
     def _create_dalle_background_prompt(self, title: str, theme: str, client_context: str) -> str:
-        """Create optimized DALL-E prompt for real estate background generation
+        """Create optimized DALL-E prompt for any business type based on context analysis
         
         Args:
             title: Content title for context
@@ -371,58 +371,204 @@ class OpenAIService:
             client_context: Client-specific context from system message
             
         Returns:
-            Optimized DALL-E prompt for real estate imagery
+            Optimized DALL-E prompt adapted to business type and content
         """
-        # Extract key themes from title for content-specific imagery
-        title_lower = title.lower()
+        # Detect business type from client context first (most reliable)
+        business_type = self._detect_business_type(client_context, title)
         
-        # Determine primary focus
-        if any(word in title_lower for word in ['overwhelmed', 'confident', 'fear', 'peace', 'mind']):
-            focus = "peaceful, confidence-inspiring residential interior"
-        elif any(word in title_lower for word in ['first', 'home', 'buying', 'buyer']):
-            focus = "welcoming, dream home exterior"
-        elif any(word in title_lower for word in ['investment', 'market', 'value']):
-            focus = "sophisticated property investment scene"
-        elif any(word in title_lower for word in ['luxury', 'premium', 'high-end']):
-            focus = "luxury residential architecture"
-        else:
-            focus = "beautiful residential home scene"
+        # Generate business-appropriate focus based on content theme
+        focus = self._generate_content_focus(title, business_type)
         
-        # Theme-specific styling
-        theme_styles = {
-            "luxury": "marble finishes, gold accents, high-end fixtures, sophisticated lighting",
-            "modern": "clean lines, contemporary design, minimalist aesthetic, natural light",
-            "warm": "cozy textures, warm lighting, inviting atmosphere, comfortable furnishings",
-            "professional": "clean architecture, neutral tones, business-appropriate elegance",
-            "vibrant": "bright natural light, colorful accents, energetic atmosphere"
-        }
+        # Get industry-specific elements
+        industry_elements = self._get_industry_visual_elements(business_type, theme)
         
-        style_elements = theme_styles.get(theme, theme_styles["professional"])
-        
-        # Build comprehensive DALL-E prompt
+        # Build universal DALL-E prompt adapted to any business type
         dalle_prompt = (
-            f"Professional real estate photography of a {focus}, showcasing {style_elements}. "
-            f"The scene should convey the emotional theme of '{title}' - creating feelings of trust, "
-            f"confidence, and aspiration for potential homebuyers. "
-            f"Composition: Wide angle view with excellent natural lighting, perfect for text overlay. "
-            f"Style: High-quality architectural photography, Instagram-worthy, magazine quality. "
-            f"Avoid: People, text, logos, cluttered details, dark areas that would interfere with readability. "
-            f"Focus on: Beautiful interior design OR stunning exterior architecture, professional staging, "
-            f"premium finishes, and spatial flow that tells a story of comfort and quality living. "
-            f"Lighting: Soft, natural light with warm tones that create an inviting atmosphere."
+            f"Professional {business_type.replace('_', ' ')} photography of a {focus}, showcasing {industry_elements}. "
+            f"The scene should convey the emotional theme of '{title}' - creating feelings that resonate with "
+            f"the target audience and inspire trust, confidence, and engagement. "
+            f"Composition: Wide angle view with excellent lighting, perfect for social media text overlay. "
+            f"Style: High-quality commercial photography, Instagram-worthy, magazine quality, brand-appropriate. "
+            f"Avoid: People, text, logos, cluttered details, dark areas that would interfere with text readability. "
+            f"Focus on: Professional environment, brand-appropriate atmosphere, spatial composition that "
+            f"tells a compelling story and connects emotionally with the target audience. "
+            f"Lighting: Professional lighting that creates the right mood and atmosphere for the business type."
         )
         
-        # Add client context if available
+        # Add client context adaptations
         if client_context and len(client_context) > 50:
             context_lower = client_context.lower()
+            
+            # Universal audience adaptations
             if "millennial" in context_lower:
-                dalle_prompt += " Appeal to millennial homebuyer preferences with modern, clean design."
-            if "luxury" in context_lower:
-                dalle_prompt += " Emphasize luxury finishes and premium materials."
-            if "first-time" in context_lower:
-                dalle_prompt += " Show approachable, welcoming spaces that reduce anxiety."
+                dalle_prompt += " Appeal to millennial preferences with modern, clean, authentic design."
+            if "luxury" in context_lower or "premium" in context_lower:
+                dalle_prompt += " Emphasize luxury elements, premium materials, and sophisticated atmosphere."
+            if "first-time" in context_lower or "beginner" in context_lower:
+                dalle_prompt += " Show approachable, welcoming spaces that reduce anxiety and build confidence."
+            if "professional" in context_lower or "business" in context_lower:
+                dalle_prompt += " Emphasize credibility, expertise, and professional excellence."
         
         return dalle_prompt
+    
+    def _detect_business_type(self, client_context: str, title: str) -> str:
+        """Detect business type from client context and content
+        
+        Args:
+            client_context: Client system message context
+            title: Content title
+            
+        Returns:
+            Business type identifier
+        """
+        context_lower = (client_context + " " + title).lower()
+        
+        # Real Estate
+        if any(word in context_lower for word in ['real estate', 'realtor', 'property', 'home', 'buyer', 'seller', 'listing']):
+            return 'real_estate'
+        
+        # Fitness/Health
+        elif any(word in context_lower for word in ['fitness', 'gym', 'workout', 'health', 'nutrition', 'personal trainer', 'wellness']):
+            return 'fitness'
+        
+        # Restaurant/Food
+        elif any(word in context_lower for word in ['restaurant', 'food', 'chef', 'dining', 'cuisine', 'menu', 'culinary']):
+            return 'restaurant'
+        
+        # Coaching/Consulting
+        elif any(word in context_lower for word in ['coach', 'coaching', 'consultant', 'mentor', 'business coach', 'life coach']):
+            return 'coaching'
+        
+        # E-commerce/Retail
+        elif any(word in context_lower for word in ['e-commerce', 'retail', 'store', 'shop', 'product', 'selling', 'brand']):
+            return 'retail'
+        
+        # Professional Services
+        elif any(word in context_lower for word in ['lawyer', 'attorney', 'accountant', 'financial', 'consulting', 'professional']):
+            return 'professional_services'
+        
+        # Technology/SaaS
+        elif any(word in context_lower for word in ['tech', 'software', 'app', 'saas', 'platform', 'digital', 'startup']):
+            return 'technology'
+        
+        # Beauty/Spa
+        elif any(word in context_lower for word in ['beauty', 'spa', 'salon', 'skincare', 'massage', 'aesthetics']):
+            return 'beauty'
+        
+        # Default to professional services
+        else:
+            return 'professional_services'
+    
+    def _generate_content_focus(self, title: str, business_type: str) -> str:
+        """Generate content-appropriate visual focus based on business type and title
+        
+        Args:
+            title: Content title
+            business_type: Detected business type
+            
+        Returns:
+            Visual focus description
+        """
+        title_lower = title.lower()
+        
+        # Emotional themes that apply across industries
+        if any(word in title_lower for word in ['overwhelmed', 'confident', 'fear', 'peace', 'mind', 'stress']):
+            emotion = 'calming_confidence'
+        elif any(word in title_lower for word in ['success', 'achievement', 'growth', 'results']):
+            emotion = 'success_oriented'
+        elif any(word in title_lower for word in ['luxury', 'premium', 'exclusive', 'high-end']):
+            emotion = 'luxury_focused'
+        else:
+            emotion = 'professional_standard'
+        
+        # Business-specific visual mapping
+        focus_map = {
+            'real_estate': {
+                'calming_confidence': 'peaceful, confidence-inspiring residential interior with soft lighting',
+                'success_oriented': 'stunning modern home exterior showcasing achievement',
+                'luxury_focused': 'luxury residential architecture with premium finishes',
+                'professional_standard': 'beautiful residential space with professional staging'
+            },
+            'fitness': {
+                'calming_confidence': 'serene, well-equipped fitness studio with natural lighting',
+                'success_oriented': 'modern gym with success-focused motivational atmosphere',
+                'luxury_focused': 'premium fitness facility with high-end equipment',
+                'professional_standard': 'clean, professional fitness environment'
+            },
+            'restaurant': {
+                'calming_confidence': 'warm, inviting restaurant interior with ambient lighting',
+                'success_oriented': 'bustling, successful restaurant kitchen in action',
+                'luxury_focused': 'upscale fine dining restaurant with elegant atmosphere',
+                'professional_standard': 'professional commercial kitchen or dining space'
+            },
+            'coaching': {
+                'calming_confidence': 'peaceful, professional office space for consultations',
+                'success_oriented': 'modern business environment showcasing growth and success',
+                'luxury_focused': 'premium executive office with sophisticated decor',
+                'professional_standard': 'clean, professional meeting or office space'
+            },
+            'retail': {
+                'calming_confidence': 'welcoming, organized retail space with soft lighting',
+                'success_oriented': 'thriving retail store with customers and activity',
+                'luxury_focused': 'high-end boutique with premium product displays',
+                'professional_standard': 'clean, well-organized retail environment'
+            },
+            'professional_services': {
+                'calming_confidence': 'calm, trustworthy professional office environment',
+                'success_oriented': 'modern business office showcasing professionalism and success',
+                'luxury_focused': 'executive-level office with premium furnishings',
+                'professional_standard': 'clean, professional business environment'
+            },
+            'technology': {
+                'calming_confidence': 'clean, modern tech workspace with calming elements',
+                'success_oriented': 'innovative tech office with cutting-edge equipment',
+                'luxury_focused': 'premium tech headquarters with sophisticated design',
+                'professional_standard': 'professional tech workspace or office'
+            },
+            'beauty': {
+                'calming_confidence': 'serene spa treatment room with soft, natural lighting',
+                'success_oriented': 'modern beauty salon with professional equipment',
+                'luxury_focused': 'luxury spa or high-end beauty salon with premium atmosphere',
+                'professional_standard': 'clean, professional beauty or wellness space'
+            }
+        }
+        
+        return focus_map.get(business_type, focus_map['professional_services'])[emotion]
+    
+    def _get_industry_visual_elements(self, business_type: str, theme: str) -> str:
+        """Get industry-specific visual elements for the theme
+        
+        Args:
+            business_type: Detected business type
+            theme: Visual theme
+            
+        Returns:
+            Industry-specific visual elements
+        """
+        base_elements = {
+            "luxury": "premium materials, elegant fixtures, sophisticated lighting, high-end finishes",
+            "modern": "clean lines, contemporary design, minimalist aesthetic, natural light",
+            "warm": "cozy textures, warm lighting, inviting atmosphere, comfortable elements",
+            "professional": "clean design, neutral tones, business-appropriate elegance, organized space",
+            "vibrant": "bright natural light, energetic colors, dynamic atmosphere, engaging elements"
+        }
+        
+        # Industry-specific additions
+        industry_additions = {
+            'real_estate': "architectural details, interior staging, spatial flow, home atmosphere",
+            'fitness': "exercise equipment, motivational elements, health-focused atmosphere, active energy",
+            'restaurant': "culinary elements, dining atmosphere, food presentation spaces, hospitality warmth",
+            'coaching': "consultation areas, growth-oriented atmosphere, trust-building elements, professional rapport",
+            'retail': "product displays, customer-friendly layout, brand presentation, shopping experience",
+            'professional_services': "credibility elements, trust-building atmosphere, expertise showcase, client comfort",
+            'technology': "innovation elements, modern tech aesthetic, cutting-edge atmosphere, digital sophistication",
+            'beauty': "wellness atmosphere, relaxation elements, self-care environment, transformation space"
+        }
+        
+        base = base_elements.get(theme, base_elements["professional"])
+        addition = industry_additions.get(business_type, industry_additions['professional_services'])
+        
+        return f"{base}, {addition}"
     
     def _create_content_optimization_prompt(
         self, 

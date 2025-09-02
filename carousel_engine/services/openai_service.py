@@ -26,33 +26,33 @@ class OpenAIService:
         self.client = OpenAI(api_key=api_key or config.openai_api_key)
         self.total_cost = 0.0
         
-    async def generate_background_image(
+    async def generate_background_description(
         self, 
         title: str, 
         style: str = "professional social media background",
-        size: str = "1024x1024"
-    ) -> tuple[bytes, float]:
-        """Generate a background image using DALL-E
+        theme: str = "modern"
+    ) -> tuple[str, float]:
+        """Generate a background image description using GPT model
         
         Args:
             title: Content title for image context
             style: Image style description
-            size: Image size (1024x1024, 1792x1024, or 1024x1792)
+            theme: Visual theme (luxury, modern, warm, professional, vibrant)
             
         Returns:
-            Tuple of (image_data_bytes, estimated_cost)
+            Tuple of (background_description, estimated_cost)
             
         Raises:
-            OpenAIError: If image generation fails
+            OpenAIError: If description generation fails
         """
         try:
-            logger.info(f"Generating background image for title: {title}")
+            logger.info(f"Generating background description for title: {title}")
             
-            # Create prompt for background image
-            prompt = self._create_background_prompt(title, style)
+            # Create prompt for background description
+            prompt = self._create_background_description_prompt(title, style, theme)
             
             # Check cost limit
-            estimated_cost = self._estimate_dalle_cost(size)
+            estimated_cost = self._estimate_gpt_cost(prompt)
             if self.total_cost + estimated_cost > config.max_cost_per_run:
                 raise OpenAIError(
                     f"Cost limit would be exceeded. Current: ${self.total_cost:.2f}, "
@@ -60,40 +60,32 @@ class OpenAIService:
                     prompt=prompt
                 )
             
-            # Generate image
-            response = self.client.images.generate(
-                model="dall-e-3",
-                prompt=prompt,
-                size=size,
-                quality="standard",
-                n=1
+            # Generate background description
+            response = await self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "You are a professional graphic designer specializing in social media background designs."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=300,
+                temperature=0.7
             )
             
-            # Get image URL
-            image_url = response.data[0].url
+            background_description = response.choices[0].message.content.strip()
             
-            # Download image data
-            image_response = requests.get(image_url, timeout=30)
-            image_response.raise_for_status()
+            # Calculate actual cost
+            actual_cost = self._calculate_actual_gpt_cost(response.usage)
+            self.total_cost += actual_cost
             
-            image_data = image_response.content
-            
-            # Update cost tracking
-            self.total_cost += estimated_cost
-            
-            logger.info(f"Successfully generated background image. Cost: ${estimated_cost:.2f}")
-            return image_data, estimated_cost
+            logger.info(f"Successfully generated background description. Cost: ${actual_cost:.4f}")
+            return background_description, actual_cost
             
         except openai.OpenAIError as e:
-            error_msg = f"OpenAI API error generating background image: {e}"
-            logger.error(error_msg)
-            raise OpenAIError(error_msg, prompt=prompt)
-        except requests.RequestException as e:
-            error_msg = f"Failed to download generated image: {e}"
+            error_msg = f"OpenAI API error generating background description: {e}"
             logger.error(error_msg)
             raise OpenAIError(error_msg, prompt=prompt)
         except Exception as e:
-            error_msg = f"Unexpected error generating background image: {e}"
+            error_msg = f"Unexpected error generating background description: {e}"
             logger.error(error_msg)
             raise OpenAIError(error_msg, prompt=prompt)
     
@@ -242,15 +234,16 @@ class OpenAIService:
         """Reset cost tracking to zero"""
         self.total_cost = 0.0
     
-    def _create_background_prompt(self, title: str, style: str) -> str:
-        """Create unique prompt for background image generation based on content
+    def _create_background_description_prompt(self, title: str, style: str, theme: str) -> str:
+        """Create prompt for generating background image description based on content
         
         Args:
             title: Content title
-            style: Image style
+            style: Image style description
+            theme: Visual theme (luxury, modern, warm, professional, vibrant)
             
         Returns:
-            Image generation prompt tailored to the specific content
+            Prompt for generating detailed background description
         """
         # Extract key themes from title for content-specific imagery
         title_lower = title.lower()
@@ -275,16 +268,26 @@ class OpenAIService:
         import random
         selected_theme = random.choice(content_themes)
         
+        # Theme style mappings
+        theme_styles = {
+            "luxury": "luxurious materials, marble textures, gold accents, premium finishes, sophisticated lighting",
+            "modern": "clean lines, minimalist design, contemporary furniture, geometric shapes, neutral colors",
+            "warm": "warm colors, cozy atmosphere, inviting textures, soft lighting, comfortable furnishings",
+            "professional": "clean and organized, sophisticated neutral colors, business-appropriate aesthetics",
+            "vibrant": "bright accent colors, energetic atmosphere, dynamic composition, bold design elements"
+        }
+        
+        theme_description = theme_styles.get(theme, theme_styles["modern"])
+        
         return (
-            f"Create a unique, calming residential real estate background image for the carousel topic: '{title}'. "
-            f"Focus specifically on: {selected_theme} with warm, natural lighting. "
-            f"Visual style: Clean, professional real estate photography with warm neutrals, soft whites, "
-            f"natural wood tones, and gentle earth tones. The scene should evoke feelings related to the theme "
-            f"of {title}. Ensure good contrast areas for text overlay. Avoid busy patterns, text, or overly "
-            f"detailed elements. Make this image unique and specifically tailored to convey the emotional "
-            f"message of '{title}' through visual storytelling. Add subtle unique details that make this "
-            f"different from standard real estate photos - perhaps specific lighting, furniture arrangement, "
-            f"or decorative elements that support the content theme."
+            f"Create a detailed description for a {theme} social media background image for real estate content titled: '{title}'. "
+            f"The background should feature: {selected_theme} with {theme_description}. "
+            f"Style requirements: {style} with excellent contrast areas for text overlay. "
+            f"The image should evoke emotions related to the theme of '{title}' while maintaining professional real estate standards. "
+            f"Avoid: people, text, logos, busy patterns, or overly detailed elements that would interfere with text readability. "
+            f"Focus on: architectural elements, interior design, lighting, and spatial composition that supports the emotional message of '{title}'. "
+            f"Describe the color palette, lighting conditions, furniture arrangement, and any unique design elements that make this background "
+            f"specifically tailored to the content theme. Keep the description detailed but concise (under 200 words)."
         )
     
     def _create_content_optimization_prompt(

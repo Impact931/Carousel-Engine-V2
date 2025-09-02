@@ -39,6 +39,11 @@ class NotionService:
         Raises:
             NotionAPIError: If page retrieval fails
         """
+        # Initialize variables with defaults to prevent scope issues
+        properties = {}
+        title = ""
+        content = ""
+        
         try:
             logger.info(f"Fetching Notion page: {page_id}")
             
@@ -51,11 +56,11 @@ class NotionService:
             # Extract title
             title = self._extract_title(page)
             
-            # Extract properties first
-            properties = page.get("properties", {})
+            # Extract properties (ensure safe access)
+            properties = page.get("properties", {}) if page else {}
             
             # Extract content text from blocks
-            content = self._extract_content(blocks)
+            content = self._extract_content(blocks) if blocks else ""
             
             # If no content in blocks, try to extract from rich text properties
             if not content.strip():

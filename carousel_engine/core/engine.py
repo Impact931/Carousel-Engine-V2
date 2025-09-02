@@ -142,16 +142,17 @@ class CarouselEngine:
             optimized_slides = await self._process_content(notion_page, client_system_message)
             content_time = time.time() - content_start
             
-            # Step 3: Generate background image
+            # Step 3: Generate background description
             image_gen_start = time.time()
-            background_image_data, image_cost = await self.openai.generate_background_image(
+            background_description, image_cost = await self.openai.generate_background_description(
                 notion_page.title,
-                f"professional {notion_page.format.value} carousel background"
+                f"professional {notion_page.format.value} carousel background",
+                "professional"  # theme parameter
             )
             image_gen_time = time.time() - image_gen_start
             
-            # Step 4: Create carousel slides
-            slide_images = await self._create_slide_images(optimized_slides, background_image_data)
+            # Step 4: Create carousel slides with description
+            slide_images = await self._create_slide_images(optimized_slides, background_description)
             
             # Step 5: Upload to Google Drive
             upload_start = time.time()
@@ -284,13 +285,13 @@ class CarouselEngine:
     async def _create_slide_images(
         self, 
         slides: List[CarouselSlide], 
-        background_image_data: bytes
+        background_description: str
     ) -> List[Tuple[bytes, str]]:
         """Create image data for all slides
         
         Args:
             slides: List of CarouselSlide objects
-            background_image_data: Background image data
+            background_description: Background image description from GPT
             
         Returns:
             List of (image_data, filename) tuples
@@ -302,9 +303,14 @@ class CarouselEngine:
                 # Generate filename (content slides only)
                 filename = f"{slide.slide_number:02d}_slide.png"
                 
+                # Create a simple background image based on the description
+                # For now, create a professional neutral background
+                # TODO: Future enhancement could parse description to create themed background
+                simple_background = self._create_simple_background(background_description)
+                
                 # Create slide image (all content slides)
                 image_data = self.image_processor.create_carousel_slide(
-                    background_image_data,
+                    simple_background,
                     slide.content,
                     is_title_slide=False,
                     slide_number=slide.slide_number
@@ -318,6 +324,62 @@ class CarouselEngine:
         
         logger.info(f"Successfully created {len(slide_images)} slide images")
         return slide_images
+    
+    def _create_simple_background(self, description: str) -> bytes:
+        """Create a simple background image based on GPT description
+        
+        Args:
+            description: GPT-generated background description
+            
+        Returns:
+            Simple background image as bytes
+        """
+        try:
+            from PIL import Image, ImageDraw
+            from io import BytesIO
+            
+            # Create a simple gradient or solid color background
+            # Parse description for color hints
+            description_lower = description.lower()
+            
+            # Default professional colors
+            if any(word in description_lower for word in ['warm', 'cozy', 'inviting']):
+                color = (250, 245, 235)  # Warm off-white
+            elif any(word in description_lower for word in ['luxury', 'premium', 'sophisticated']):
+                color = (248, 248, 245)  # Elegant cream
+            elif any(word in description_lower for word in ['vibrant', 'bright', 'energetic']):
+                color = (245, 250, 255)  # Light blue tint
+            elif any(word in description_lower for word in ['modern', 'clean', 'minimalist']):
+                color = (250, 250, 250)  # Clean white
+            else:
+                color = (248, 248, 248)  # Professional light gray
+            
+            # Create image with appropriate size
+            width, height = 1080, 1080  # Standard social media size
+            image = Image.new('RGB', (width, height), color)
+            
+            # Add subtle texture/gradient
+            draw = ImageDraw.Draw(image)
+            for i in range(height):
+                alpha = int(255 * (1 - i / height * 0.1))  # Subtle gradient
+                gradient_color = tuple(min(255, c + alpha // 20) for c in color)
+                draw.line([(0, i), (width, i)], fill=gradient_color)
+            
+            # Convert to bytes
+            buffer = BytesIO()
+            image.save(buffer, format='PNG', quality=95)
+            return buffer.getvalue()
+            
+        except Exception as e:
+            logger.error(f"Failed to create simple background: {e}")
+            # Return a basic white background as fallback
+            from PIL import Image
+            from io import BytesIO
+            
+            image = Image.new('RGB', (1080, 1080), (255, 255, 255))
+            buffer = BytesIO()
+            image.save(buffer, format='PNG')
+            return buffer.getvalue()
     
     async def _upload_to_google_drive(
         self, 

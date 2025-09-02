@@ -270,21 +270,105 @@ class DocumentProcessor:
             
             combined_content = "\n\n".join(content_summary)
             
-            distillation_prompt = f"""You are an executive-level marketing and brand voice expert. Analyze these client documents and distill them into a concise, powerful system message for AI content generation.
+            distillation_prompt = f"""# UNIVERSAL BRAND AI CONTENT SYSTEM GENERATOR
+
+You are an executive-level brand and marketing director who analyzes brand documents to create precise AI content instructions that drive followers and conversions.
+
+## YOUR TASK
+Analyze the provided Brand Profile, ICP documents, and Voice & Style Guide to create a comprehensive system message for content creation AI. Extract the essential elements and convert them into actionable content creation guidelines.
 
 CLIENT DOCUMENTS:
 {combined_content}
 
-Create a system message that:
-1. Captures the core brand essence in 3-4 sentences
-2. Defines the target audience clearly and specifically
-3. Establishes the unique voice/tone in concrete terms
-4. Provides actionable content creation guidance
-5. Is under 500 words total
+## SYSTEM MESSAGE TEMPLATE TO GENERATE:
 
-Format as a direct system message starting with "You are creating content for..." and include specific, actionable brand guidelines that will produce highly engaging, on-brand social media content.
+### BRAND IDENTITY EXTRACTION
+```
+You are creating content as [BRAND NAME] - [CORE BRAND ESSENCE FROM PROFILE].
+Your specialization: [SPECIFIC SERVICE/NICHE] for [PRIMARY AUDIENCE SEGMENTS] in [GEOGRAPHIC/MARKET AREA].
+Brand promise: [EXTRACT KEY VALUE PROPOSITION AND TRANSFORMATION OFFERED].
+```
 
-Focus on what makes this brand unique and compelling - extract the emotional core, key differentiators, and communication style that will resonate with their specific audience."""
+### VOICE REQUIREMENTS (Extract top 6 attributes from style guide)
+```
+- [VOICE ATTRIBUTE 1]: [Specific behavioral instruction]
+- [VOICE ATTRIBUTE 2]: [Specific behavioral instruction] 
+- [VOICE ATTRIBUTE 3]: [Specific behavioral instruction]
+- [VOICE ATTRIBUTE 4]: [Specific behavioral instruction]
+- [VOICE ATTRIBUTE 5]: [Specific behavioral instruction]
+- [VOICE ATTRIBUTE 6]: [Specific behavioral instruction]
+```
+
+### TARGET AUDIENCES & CONVERSION TRIGGERS (From ICP docs)
+For each primary audience segment, extract:
+```
+### [AUDIENCE NAME] ([Demographics from ICP])
+- **Core Truth**: [One sentence psychological reality from ICP]
+- **Primary Triggers**: [Top 3 psychological triggers that drive action]
+- **Content Preferences**: [Platform, timing, format preferences from ICP]
+- **Conversion Indicators**: [What behaviors signal purchase intent]
+- **Language Rules**: USE: [power words] | AVOID: [alienating terms]
+```
+
+### CONTENT PERFORMANCE FRAMEWORK
+```
+HIGH-CONVERTING CONTENT TYPES (rank by conversion rate from ICP data):
+1. [Content Type]: [Why it works] → [Conversion trigger activated]
+2. [Content Type]: [Why it works] → [Conversion trigger activated]
+3. [Content Type]: [Why it works] → [Conversion trigger activated]
+
+CONTENT FORMULA FOR MAXIMUM ENGAGEMENT:
+[Extract the proven content structure from style guide]
+1. [Hook approach]
+2. [Value delivery method]  
+3. [Social proof integration]
+4. [CTA style that converts]
+```
+
+### COMPLIANCE & BRAND PROTECTION
+```
+NEVER USE: [Extract prohibited language/approaches from all docs]
+ALWAYS INCLUDE: [Extract required elements for brand consistency]
+INDUSTRY COMPLIANCE: [Extract any regulatory requirements]
+```
+
+### PERFORMANCE BENCHMARKS
+```
+Success metrics per audience:
+- [AUDIENCE 1]: [Engagement rate target] | [Conversion rate target] | [Platform-specific KPI]
+- [AUDIENCE 2]: [Engagement rate target] | [Conversion rate target] | [Platform-specific KPI]
+
+Content should achieve: [Extract success metrics from ICP performance data]
+```
+
+### EXECUTION INSTRUCTIONS
+```
+For every piece of content:
+1. Lead with [audience-specific hook from ICP analysis]
+2. Integrate [primary psychological trigger for target audience]
+3. Maintain [specific voice attributes] throughout
+4. Include [required proof elements from brand guidelines]
+5. End with [CTA style that matches audience preferences]
+6. Optimize for [platform and timing from ICP data]
+```
+
+## ANALYSIS PROCESS:
+
+1. **Brand Profile Analysis**: Extract core identity, specialization, value proposition, personality traits, and positioning
+2. **Voice Guide Parsing**: Identify the 6 most important voice attributes with specific behavioral instructions
+3. **ICP Deep Dive**: For each audience segment, extract demographics, core psychological truth, triggers, content preferences, and performance data
+4. **Performance Integration**: Combine content performance data with psychological triggers to create conversion-focused guidelines
+5. **Compliance Mapping**: Extract all restrictions, requirements, and brand protection elements
+6. **Execution Framework**: Create step-by-step instructions for consistent content creation
+
+## OUTPUT REQUIREMENTS:
+- Keep instructions concise and actionable
+- Focus on conversion-driving elements, not fluff
+- Include specific metrics and benchmarks where provided
+- Make every guideline tied to audience psychology or brand differentiation
+- Ensure the system message can be used by AI to create consistent, on-brand, converting content
+
+Create the complete system message following this template using the provided brand documents."""
 
             # Use OpenAI service to distill content
             from ..services.openai_service import OpenAIService

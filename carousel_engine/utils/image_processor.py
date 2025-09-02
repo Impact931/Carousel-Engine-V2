@@ -140,24 +140,28 @@ class ImageProcessor:
             slide_number: Slide number
         """
         try:
-            # Load Lato font (fallback to system font if not available)
-            font_size = min(width, height) // 18  # Responsive font size
+            # Calculate responsive font size - increased for better readability
+            font_size = int(width * 0.045)  # Increased from width//18 to 4.5% of image width
             content_font = self._get_lato_font(font_size)
             
-            # Split content into maximum 5 lines for engaging storytelling
-            lines = self._wrap_text_to_lines(content, content_font, width * 0.8, max_lines=5)
+            # Text box width should be 90% of total image width
+            text_box_width = int(width * 0.9)  # 90% of image width
+            text_box_left_margin = int(width * 0.05)  # 5% margin on each side
             
-            # Calculate text dimensions
-            line_height = content_font.getmetrics()[0] + content_font.getmetrics()[1]
+            # Split content into 2-3 lines with optimized wrapping
+            lines = self._wrap_text_optimized(content, content_font, text_box_width, max_lines=3)
+            
+            # Calculate text dimensions with improved line spacing
+            line_spacing_multiplier = 1.4  # Increased line height for better readability
+            line_height = int((content_font.getmetrics()[0] + content_font.getmetrics()[1]) * line_spacing_multiplier)
             total_text_height = len(lines) * line_height
-            max_line_width = max([draw.textlength(line, font=content_font) for line in lines])
             
-            # Position the text box in center of image
-            box_padding = 40  # Padding inside the box
-            box_width = max_line_width + (box_padding * 2)
+            # Position the text box - 90% width, centered vertically
+            box_padding = int(width * 0.03)  # Responsive padding (3% of image width)
+            box_width = text_box_width
             box_height = total_text_height + (box_padding * 2)
             
-            box_x = (width - box_width) // 2
+            box_x = text_box_left_margin
             box_y = (height - box_height) // 2
             
             # Create semi-opaque white background box (40% opacity)
@@ -180,12 +184,12 @@ class ImageProcessor:
             # Choose dark text color that complements real estate theme
             text_color = (64, 64, 64)  # Dark gray - readable and warm
             
-            # Draw text lines
+            # Draw text lines with proper positioning within the 90% width box
             text_y = box_y + box_padding
             for line in lines:
-                # Center each line horizontally
+                # Center each line within the 90% width box
                 line_width = draw.textlength(line, font=content_font)
-                text_x = (width - line_width) // 2
+                text_x = text_box_left_margin + (text_box_width - line_width) // 2
                 
                 draw.text(
                     (text_x, text_y),
@@ -462,3 +466,60 @@ class ImageProcessor:
             lines.append(' '.join(current_line))
         
         return lines
+    
+    def _wrap_text_optimized(self, text: str, font: ImageFont.ImageFont, box_width: int, max_lines: int = 3) -> list[str]:
+        """Wrap text optimally for 2-3 lines with proper buffering
+        
+        Args:
+            text: Text to wrap
+            font: Font to use for measuring
+            box_width: Total box width (90% of image width)
+            max_lines: Maximum number of lines (default 3)
+            
+        Returns:
+            List of wrapped text lines with optimal spacing
+        """
+        try:
+            words = text.split()
+            if not words:
+                return ['']
+            
+            lines = []
+            current_line = []
+            
+            # Use 80% of box width for text, leaving 10% buffer on each side
+            usable_width = int(box_width * 0.8)
+            
+            for word in words:
+                test_line = ' '.join(current_line + [word])
+                
+                # Use textlength for accurate measurement
+                if hasattr(font, 'getlength'):
+                    text_width = font.getlength(test_line)
+                else:
+                    # Fallback for older PIL versions
+                    text_width = font.getsize(test_line)[0]
+                
+                if text_width <= usable_width or not current_line:
+                    current_line.append(word)
+                else:
+                    # Start new line if we haven't reached max lines
+                    if len(lines) < max_lines - 1:
+                        if current_line:
+                            lines.append(' '.join(current_line))
+                        current_line = [word]
+                    else:
+                        # We're at max lines, finish current line
+                        if current_line:
+                            lines.append(' '.join(current_line))
+                        break
+            
+            # Add remaining words as final line if within limit
+            if current_line and len(lines) < max_lines:
+                lines.append(' '.join(current_line))
+            
+            return lines if lines else [text]
+            
+        except Exception as e:
+            logger.error(f"Error in optimized text wrapping: {e}")
+            return [text[:50] + '...' if len(text) > 50 else text]

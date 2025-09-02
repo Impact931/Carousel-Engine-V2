@@ -9,6 +9,24 @@ import sys
 import pickle
 from pathlib import Path
 
+# Load environment variables from .env file manually
+def load_env_file():
+    """Load environment variables from .env file"""
+    env_file = Path('.env')
+    if env_file.exists():
+        with open(env_file, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ[key.strip()] = value.strip()
+        print(f"✅ Loaded environment variables from .env file")
+    else:
+        print(f"⚠️  No .env file found")
+
+# Load the .env file
+load_env_file()
+
 def test_environment_variables():
     """Test if required environment variables are set"""
     print("🔍 Checking Environment Variables...")

@@ -259,11 +259,18 @@ class DocumentProcessor:
             Distilled system message or None if failed
         """
         try:
-            # Prepare content for analysis
+            # Prepare content for analysis - keep full content for thorough brand analysis
             content_summary = []
+            total_chars = 0
+            
             for doc_type, content in extracted_content.items():
                 if content and content.strip():
-                    content_summary.append(f"{doc_type.upper()}:\n{content[:2000]}...")  # Limit to prevent token overflow
+                    # Allow much more content for comprehensive analysis
+                    content_chunk = content[:15000]  # Increased from 2000 to capture full ICP details
+                    content_summary.append(f"{doc_type.upper()}:\n{content_chunk}")
+                    total_chars += len(content_chunk)
+            
+            logger.info(f"Processing {total_chars} characters of client content for system message generation")
             
             if not content_summary:
                 return None
@@ -272,10 +279,24 @@ class DocumentProcessor:
             
             distillation_prompt = f"""# UNIVERSAL BRAND AI CONTENT SYSTEM GENERATOR
 
-You are an executive-level brand and marketing director who analyzes brand documents to create precise AI content instructions that drive followers and conversions.
+You are a $10,000/month master brand strategist and conversion specialist with 20 years of experience creating multi-million dollar marketing campaigns. You have the analytical depth of a behavioral psychologist combined with the strategic precision of a Fortune 500 marketing director.
 
-## YOUR TASK
-Analyze the provided Brand Profile, ICP documents, and Voice & Style Guide to create a comprehensive system message for content creation AI. Extract the essential elements and convert them into actionable content creation guidelines.
+## YOUR EXPERTISE
+- Deep psychological profiling and audience segmentation
+- Conversion-focused content strategy and behavioral triggers  
+- Advanced brand positioning and competitive differentiation
+- Multi-platform content optimization and engagement tactics
+- Revenue-driving messaging frameworks and sales psychology
+
+## YOUR MISSION
+Transform these raw brand documents into a comprehensive AI content instruction system that rivals the strategic depth of a $10k/month brand consultant. Extract every psychological insight, conversion trigger, and strategic nuance to create instructions that will generate highly converting, psychologically targeted content.
+
+**CRITICAL ANALYSIS REQUIREMENTS**:
+- Analyze ALL content thoroughly - do not summarize or truncate key details
+- A master strategist examines every detail for competitive advantages and psychological insights
+- **MULTI-ICP FOCUS**: Clients often have 3-7 distinct audience segments - identify and profile EVERY SINGLE ONE
+- Cross-reference all documents to ensure no audience segment is missed
+- Each ICP requires its own complete profile with unique psychological triggers and conversion strategies
 
 CLIENT DOCUMENTS:
 {combined_content}
@@ -300,15 +321,20 @@ Brand promise: [EXTRACT KEY VALUE PROPOSITION AND TRANSFORMATION OFFERED].
 ```
 
 ### TARGET AUDIENCES & CONVERSION TRIGGERS (From ICP docs)
-For each primary audience segment, extract:
+**COMPREHENSIVE MULTI-ICP ANALYSIS REQUIRED**: Examine ALL documents for distinct audience segments. Most clients have 3-7 different ICPs. Create a complete profile for EVERY SINGLE audience segment mentioned.
+
+For each primary audience segment found in the documents, extract:
 ```
 ### [AUDIENCE NAME] ([Demographics from ICP])
 - **Core Truth**: [One sentence psychological reality from ICP]
 - **Primary Triggers**: [Top 3 psychological triggers that drive action]
 - **Content Preferences**: [Platform, timing, format preferences from ICP]
-- **Conversion Indicators**: [What behaviors signal purchase intent]
+- **Conversion Indicators**: [What behaviors signal purchase intent]  
 - **Language Rules**: USE: [power words] | AVOID: [alienating terms]
 ```
+
+**REPEAT THE ABOVE FORMAT FOR EVERY DISTINCT AUDIENCE SEGMENT IDENTIFIED IN THE DOCUMENTS**
+**DO NOT STOP UNTIL ALL AUDIENCE SEGMENTS HAVE BEEN PROFILED**
 
 ### CONTENT PERFORMANCE FRAMEWORK
 ```
@@ -334,11 +360,16 @@ INDUSTRY COMPLIANCE: [Extract any regulatory requirements]
 
 ### PERFORMANCE BENCHMARKS
 ```
-Success metrics per audience:
+Success metrics per audience (CREATE ENTRY FOR EVERY AUDIENCE SEGMENT IDENTIFIED):
 - [AUDIENCE 1]: [Engagement rate target] | [Conversion rate target] | [Platform-specific KPI]
 - [AUDIENCE 2]: [Engagement rate target] | [Conversion rate target] | [Platform-specific KPI]
+- [AUDIENCE 3]: [Engagement rate target] | [Conversion rate target] | [Platform-specific KPI]
+- [AUDIENCE 4]: [Engagement rate target] | [Conversion rate target] | [Platform-specific KPI]
+- [AUDIENCE 5]: [Engagement rate target] | [Conversion rate target] | [Platform-specific KPI]
+**[ADD MORE LINES IF MORE AUDIENCES EXIST IN THE DOCUMENTS]**
 
 Content should achieve: [Extract success metrics from ICP performance data]
+**Note: Adapt the number of audience lines to match the actual number of ICPs found in the documents**
 ```
 
 ### EXECUTION INSTRUCTIONS
@@ -354,21 +385,51 @@ For every piece of content:
 
 ## ANALYSIS PROCESS:
 
-1. **Brand Profile Analysis**: Extract core identity, specialization, value proposition, personality traits, and positioning
-2. **Voice Guide Parsing**: Identify the 6 most important voice attributes with specific behavioral instructions
-3. **ICP Deep Dive**: For each audience segment, extract demographics, core psychological truth, triggers, content preferences, and performance data
-4. **Performance Integration**: Combine content performance data with psychological triggers to create conversion-focused guidelines
-5. **Compliance Mapping**: Extract all restrictions, requirements, and brand protection elements
-6. **Execution Framework**: Create step-by-step instructions for consistent content creation
+1. **Multi-Document Inventory**: First, scan ALL provided documents to identify every distinct audience segment/ICP mentioned
+2. **ICP Count Verification**: Count the total number of unique audience segments - expect 3-7 different ICPs typically  
+3. **Brand Profile Analysis**: Extract core identity, specialization, value proposition, personality traits, and positioning
+4. **Voice Guide Parsing**: Identify the 6 most important voice attributes with specific behavioral instructions
+5. **Comprehensive ICP Deep Dive**: For EVERY SINGLE audience segment identified, extract demographics, core psychological truth, triggers, content preferences, and performance data
+6. **Cross-Document Integration**: Ensure no audience segments are missed by cross-referencing all document types
+7. **Performance Integration**: Combine content performance data with psychological triggers to create conversion-focused guidelines for each ICP
+8. **Compliance Mapping**: Extract all restrictions, requirements, and brand protection elements
+9. **Multi-Audience Execution Framework**: Create step-by-step instructions for consistent content creation across all audience segments
 
-## OUTPUT REQUIREMENTS:
-- Keep instructions concise and actionable
-- Focus on conversion-driving elements, not fluff
-- Include specific metrics and benchmarks where provided
-- Make every guideline tied to audience psychology or brand differentiation
-- Ensure the system message can be used by AI to create consistent, on-brand, converting content
+## ADVANCED STRATEGIC REQUIREMENTS:
 
-Create the complete system message following this template using the provided brand documents."""
+### DEPTH REQUIREMENTS:
+- **Psychological Profiling**: Extract deep motivational drivers, fears, aspirations, and decision-making patterns
+- **Behavioral Triggers**: Identify specific words, phrases, social proof elements that drive action  
+- **Competitive Differentiation**: Highlight unique positioning angles and market gaps
+- **Content Performance Intelligence**: Map content types to conversion outcomes and engagement patterns
+- **Multi-Audience Strategy**: Address ALL audience segments mentioned in ICP documents
+
+### CONVERSION FOCUS:
+- **Revenue Impact**: Every instruction must connect to measurable business outcomes
+- **Funnel Stage Mapping**: Content guidance for awareness, consideration, and decision stages  
+- **Objection Handling**: Pre-emptive responses to common hesitations and concerns
+- **Urgency Creation**: Natural scarcity and time-sensitive messaging strategies
+
+### EXECUTION PRECISION:
+- **Platform Optimization**: Specific guidance for each social media platform and content format
+- **Timing Intelligence**: Best posting times, content cadence, seasonal considerations
+- **Engagement Tactics**: Community building, response strategies, relationship nurturing
+- **Measurement Framework**: KPIs, success metrics, and performance benchmarks
+
+## CRITICAL OUTPUT INSTRUCTIONS:
+1. **COMPLETE EVERY SECTION** - Do not truncate or abbreviate any section - finish all sentences and subsections
+2. **ANALYZE ALL DOCUMENTS THOROUGHLY** - Read through EVERY document provided, extract ALL ICP segments mentioned
+3. **EXHAUST ALL ICP SEGMENTS** - Create detailed profiles for EVERY SINGLE audience mentioned across all documents (often 3-7 different ICPs)
+4. **COMPREHENSIVE AUDIENCE ANALYSIS** - If documents mention 5 ICPs, provide 5 complete audience profiles - never skip any
+5. **PROVIDE SPECIFIC METRICS** - Include exact numbers, percentages, timing details where available from each document
+6. **USE STRATEGIC LANGUAGE** - Write like a $10k/month consultant, not a generic AI
+7. **ENSURE FULL TEMPLATE COMPLETION** - Every section must be thoroughly completed with strategic depth
+8. **MULTI-DOCUMENT INTEGRATION** - Cross-reference all documents to build comprehensive understanding
+9. **NO PREMATURE STOPPING** - Continue until all content frameworks, performance benchmarks, and execution instructions are complete
+
+**MANDATORY REQUIREMENT: Count the number of distinct audience segments/ICPs mentioned in the provided documents and ensure you create a complete profile for each one. DO NOT STOP generating until you have addressed every single ICP segment found in the analysis.**
+
+**Generate the complete, comprehensive system message following this template. Do not stop until every section is fully completed with master-level strategic depth and ALL audience segments are thoroughly analyzed.**"""
 
             # Use OpenAI service to distill content
             from ..services.openai_service import OpenAIService
@@ -376,8 +437,8 @@ Create the complete system message following this template using the provided br
             
             response = await openai_service.generate_text_completion(
                 prompt=distillation_prompt,
-                max_tokens=600,
-                temperature=0.3  # Lower temperature for consistent, focused output
+                max_tokens=4000,  # Significantly increased for comprehensive multi-ICP analysis
+                temperature=0.1  # Lower for maximum consistency and thoroughness
             )
             
             if response and response.strip():

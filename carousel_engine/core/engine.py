@@ -148,7 +148,7 @@ class CarouselEngine:
                 notion_page.title,
                 "professional",  # theme
                 client_system_message or "",  # client context for theming
-                "1024x1024"  # size
+                "1792x1024"  # HD widescreen size for better quality and carousel format
             )
             image_gen_time = time.time() - image_gen_start
             

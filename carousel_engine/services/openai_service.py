@@ -125,12 +125,12 @@ class OpenAIService:
                     prompt=prompt
                 )
             
-            # Generate image with DALL-E 3
+            # Generate image with DALL-E 3 - HD quality for professional results
             response = self.client.images.generate(
                 model="dall-e-3",
                 prompt=prompt,
                 size=size,
-                quality="standard",
+                quality="hd",  # Enhanced to HD quality for professional carousel images
                 n=1
             )
             
@@ -382,17 +382,24 @@ class OpenAIService:
         # Get industry-specific elements
         industry_elements = self._get_industry_visual_elements(business_type, theme)
         
-        # Build universal DALL-E prompt adapted to any business type
+        # Build enhanced DALL-E prompt for HD quality professional results
         dalle_prompt = (
-            f"Professional {business_type.replace('_', ' ')} photography of a {focus}, showcasing {industry_elements}. "
-            f"The scene should convey the emotional theme of '{title}' - creating feelings that resonate with "
+            f"Ultra-high-quality professional {business_type.replace('_', ' ')} photography of a {focus}, showcasing {industry_elements}. "
+            f"The scene should convey the emotional theme of '{title}' - creating powerful feelings that resonate with "
             f"the target audience and inspire trust, confidence, and engagement. "
-            f"Composition: Wide angle view with excellent lighting, perfect for social media text overlay. "
-            f"Style: High-quality commercial photography, Instagram-worthy, magazine quality, brand-appropriate. "
-            f"Avoid: People, text, logos, cluttered details, dark areas that would interfere with text readability. "
-            f"Focus on: Professional environment, brand-appropriate atmosphere, spatial composition that "
-            f"tells a compelling story and connects emotionally with the target audience. "
-            f"Lighting: Professional lighting that creates the right mood and atmosphere for the business type."
+            f"Technical specifications: Shot with professional camera equipment, perfect depth of field, razor-sharp focus, "
+            f"studio-quality lighting with soft shadows and balanced exposure. Wide angle view optimized for text overlay placement. "
+            f"Visual style: Award-winning commercial photography, luxury brand aesthetic, magazine cover quality, "
+            f"Instagram-worthy composition with sophisticated color grading and professional post-processing. "
+            f"Composition requirements: Clean background areas for text placement, balanced visual weight, "
+            f"leading lines that guide the eye, professional staging and arrangement. "
+            f"Lighting setup: Multi-point professional lighting with key light, fill light, and accent lighting "
+            f"to create dimensional depth and premium atmosphere appropriate for {business_type.replace('_', ' ')}. "
+            f"Avoid: People, faces, text, logos, brand names, cluttered details, harsh shadows, "
+            f"dark areas that interfere with text readability, amateur photography aesthetics. "
+            f"Color palette: Sophisticated, brand-appropriate colors that complement text overlays and "
+            f"create emotional connection with the target audience. "
+            f"Final result: Premium visual that elevates brand perception and drives engagement."
         )
         
         # Add client context adaptations
@@ -709,21 +716,21 @@ class OpenAIService:
         return slides
     
     def _estimate_dalle_cost(self, size: str) -> float:
-        """Estimate DALL-E API cost
+        """Estimate DALL-E 3 HD quality API cost
         
         Args:
             size: Image size
             
         Returns:
-            Estimated cost in USD
+            Estimated cost in USD for HD quality images
         """
-        # DALL-E 3 pricing (as of 2024)
+        # DALL-E 3 HD quality pricing (as of 2024)
         if size == "1024x1024":
-            return 0.040  # $0.040 per image
+            return 0.080  # $0.080 per HD image (double standard quality)
         elif size in ["1792x1024", "1024x1792"]:
-            return 0.080  # $0.080 per image
+            return 0.120  # $0.120 per HD image (1.5x standard quality)
         else:
-            return 0.040  # Default to standard pricing
+            return 0.080  # Default to standard HD pricing
     
     def _estimate_gpt_cost(self, prompt: str) -> float:
         """Estimate GPT-5 API cost

@@ -694,6 +694,9 @@ class GoogleDriveService:
         try:
             logger.info(f"Downloading text file: {file_id}")
             
+            # Ensure Google Drive service is initialized before accessing files
+            self._ensure_service_initialized()
+            
             # Get file content
             request = self.service.files().get_media(fileId=file_id)
             file_content = request.execute()

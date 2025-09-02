@@ -297,6 +297,10 @@ class CarouselEngine:
         Returns:
             List of (image_data, filename) tuples
         """
+        # Reset font consistency for new carousel to ensure all slides use same font size
+        if self.image_processor:
+            self.image_processor.reset_font_consistency()
+        
         slide_images = []
         
         for slide in slides:
@@ -537,7 +541,13 @@ class CarouselEngine:
                             # Extract file ID from Google Drive URL
                             file_id = system_message_url.split("/file/d/")[1].split("/")[0]
                             
+                            # Check if Google Drive service is available
+                            if not self.google_drive:
+                                logger.error("Google Drive service not available - cannot download system message")
+                                return None
+                            
                             # Download system message content from Google Drive
+                            logger.info(f"Downloading system message from Google Drive file: {file_id}")
                             system_message_content = await self.google_drive.download_text_file(file_id)
                             
                             logger.info(f"Successfully retrieved system message ({len(system_message_content)} chars)")

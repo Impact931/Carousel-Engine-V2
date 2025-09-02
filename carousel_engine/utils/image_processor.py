@@ -23,6 +23,12 @@ class ImageProcessor:
         """Initialize image processor"""
         self.width = config.image_width
         self.height = config.image_height
+        self._consistent_font_size = None  # Store font size for consistency across slides
+    
+    def reset_font_consistency(self):
+        """Reset font size for new carousel generation"""
+        self._consistent_font_size = None
+        logger.debug("🔄 Font consistency reset for new carousel")
         
     def create_carousel_slide(
         self,
@@ -169,8 +175,13 @@ class ImageProcessor:
             slide_number: Slide number
         """
         try:
-            # Use intelligent font sizing with 60pt minimum for maximum legibility
-            optimal_font_size = self._calculate_optimal_content_font_size(content, width, height)
+            # Use consistent font sizing across all slides
+            if self._consistent_font_size is None:
+                # Calculate once for the first slide and reuse for all others
+                self._consistent_font_size = self._calculate_optimal_content_font_size(content, width, height)
+                logger.info(f"🎯 CONSISTENT FONT SIZE SET: {self._consistent_font_size}pt for all slides")
+            
+            optimal_font_size = self._consistent_font_size
             content_font = self._get_lato_font(optimal_font_size)
             
             # Text box width should be 90% of total image width

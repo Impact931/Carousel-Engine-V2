@@ -61,7 +61,7 @@ class OpenAIService:
                 )
             
             # Generate background description
-            response = await self.client.chat.completions.create(
+            response = self.client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
                     {"role": "system", "content": "You are a professional graphic designer specializing in social media background designs."},

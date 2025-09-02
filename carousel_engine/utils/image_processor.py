@@ -89,9 +89,9 @@ class ImageProcessor:
             height: Image height
         """
         try:
-            # Load title font
-            font_size = min(width, height) // 15  # Responsive font size
-            title_font = self._get_font(font_size)
+            # Use large fixed font for title - even bigger than content for hierarchy
+            font_size = 60  # Fixed 60pt font size for title - larger than content (48pt)
+            title_font = self._get_lato_font(font_size)
             
             # Text styling for title
             text_color = (255, 255, 255)  # White
@@ -297,24 +297,27 @@ class ImageProcessor:
         try:
             # Try to load a nice font (Arial, Helvetica, etc.)
             font_options = [
+                "/System/Library/Fonts/Helvetica.ttc",  # macOS - move most likely to succeed first
+                "/System/Library/Fonts/HelveticaNeue.ttc",  # macOS alternative
                 "Arial.ttf",
                 "arial.ttf", 
                 "Helvetica.ttf",
                 "helvetica.ttf",
                 "/System/Library/Fonts/Arial.ttf",  # macOS
-                "/System/Library/Fonts/Helvetica.ttc",  # macOS
                 "/usr/share/fonts/truetype/arial.ttf",  # Linux
                 "/Windows/Fonts/arial.ttf"  # Windows
             ]
             
             for font_path in font_options:
                 try:
-                    return ImageFont.truetype(font_path, size)
+                    font = ImageFont.truetype(font_path, size)
+                    logger.debug(f"Successfully loaded font: {font_path} at {size}pt")
+                    return font
                 except (OSError, IOError):
                     continue
             
-            # Fallback to default font
-            logger.warning("Could not load custom font, using default")
+            # Fallback to default font - but warn about potential size issues
+            logger.warning(f"Could not load any TrueType font, using PIL default. Font size {size}pt may not render correctly.")
             return ImageFont.load_default()
             
         except Exception as e:
@@ -342,30 +345,35 @@ class ImageProcessor:
             
             for font_path in lato_options:
                 try:
-                    return ImageFont.truetype(font_path, size)
+                    font = ImageFont.truetype(font_path, size)
+                    logger.info(f"Successfully loaded Lato font: {font_path} at {size}pt")
+                    return font
                 except (OSError, IOError):
                     continue
             
             # Fallback to system fonts similar to Lato
             fallback_options = [
+                "/System/Library/Fonts/Helvetica.ttc",  # macOS - move most likely to succeed first
+                "/System/Library/Fonts/HelveticaNeue.ttc",  # macOS alternative
                 "Arial.ttf",
                 "arial.ttf", 
                 "Helvetica.ttf",
                 "helvetica.ttf",
                 "/System/Library/Fonts/Arial.ttf",  # macOS
-                "/System/Library/Fonts/Helvetica.ttc",  # macOS
                 "/usr/share/fonts/truetype/arial.ttf",  # Linux
                 "/Windows/Fonts/arial.ttf"  # Windows
             ]
             
             for font_path in fallback_options:
                 try:
-                    return ImageFont.truetype(font_path, size)
+                    font = ImageFont.truetype(font_path, size)
+                    logger.info(f"Successfully loaded fallback font: {font_path} at {size}pt")
+                    return font
                 except (OSError, IOError):
                     continue
             
-            # Final fallback to default font
-            logger.warning("Could not load Lato or similar font, using default")
+            # Final fallback to default font - but warn about potential size issues
+            logger.warning(f"Could not load any TrueType font, using PIL default. Font size {size}pt may not render correctly.")
             return ImageFont.load_default()
             
         except Exception as e:
